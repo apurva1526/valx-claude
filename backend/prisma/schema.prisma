@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProfileType {
+  BUYER
+  SUPPLIER
+}
+
+model User {
+  id          String    @id @default(uuid())
+  phoneNumber String    @unique
+  name        String?
+  createdAt   DateTime  @default(now())
+  profiles    Profile[]
+}
+
+model Profile {
+  id          String      @id @default(uuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  phoneNumber String
+  companyName String
+  profileType ProfileType
+  gstNumber   String?
+  logoUrl     String?
+  createdAt   DateTime    @default(now())
+
+  @@unique([phoneNumber, companyName, profileType])
+}

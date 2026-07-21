@@ -18,12 +18,12 @@ export function verifyOtp(phoneNumber: string, otp: string): Promise<{ token: st
 }
 
 export function getMyProfiles(token: string): Promise<{ profiles: Profile[] }> {
-  return get("/profiles/me", token);
+  return get("/profiles/me", { token });
 }
 
 export function createProfile(
   token: string,
   data: { name: string; companyName: string; profileType: ProfileType; gstNumber?: string }
 ): Promise<{ profile: Profile }> {
-  return post("/profiles", data, token);
+  return post("/profiles", data, { token });
 }

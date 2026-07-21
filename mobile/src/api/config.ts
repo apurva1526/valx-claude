@@ -1,3 +1,14 @@
-// Expo Go on a physical device can't reach "localhost" (that's the phone itself).
-// Set this to your laptop's LAN IP while the backend runs locally, e.g. "http://192.168.1.42:4000".
-export const API_BASE_URL = "http://10.7.2.55:4000";
+import Constants from "expo-constants";
+
+const BACKEND_PORT = 4000;
+
+// Expo Go connects to Metro over your Mac's current LAN IP, which changes whenever
+// you switch Wi-Fi networks. Reuse that same host for the backend instead of a
+// hardcoded IP, so this doesn't need manual updates every time the network changes.
+function resolveApiBaseUrl(): string {
+  const hostUri = Constants.expoConfig?.hostUri ?? (Constants as any).expoGoConfig?.debuggerHost;
+  const host = typeof hostUri === "string" ? hostUri.split(":")[0] : undefined;
+  return host ? `http://${host}:${BACKEND_PORT}` : `http://localhost:${BACKEND_PORT}`;
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();

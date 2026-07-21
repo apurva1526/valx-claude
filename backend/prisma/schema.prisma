@@ -31,5 +31,33 @@ model Profile {
   logoUrl     String?
   createdAt   DateTime    @default(now())
 
+  groupsOwned      Group[]         @relation("BuyerGroups")
+  groupMemberships GroupSupplier[]
+
   @@unique([phoneNumber, companyName, profileType])
+}
+
+model Group {
+  id             String   @id @default(uuid())
+  buyerProfileId String
+  buyerProfile   Profile  @relation("BuyerGroups", fields: [buyerProfileId], references: [id])
+  name           String
+  description    String?
+  imageUrl       String?
+  createdAt      DateTime @default(now())
+
+  suppliers GroupSupplier[]
+}
+
+model GroupSupplier {
+  id                String   @id @default(uuid())
+  groupId           String
+  group             Group    @relation(fields: [groupId], references: [id])
+  phoneNumber       String
+  contactName       String?
+  supplierProfileId String?
+  supplierProfile   Profile? @relation(fields: [supplierProfileId], references: [id])
+  addedAt           DateTime @default(now())
+
+  @@unique([groupId, phoneNumber])
 }

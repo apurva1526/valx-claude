@@ -40,6 +40,15 @@ export async function createProfile(req: AuthedRequest, res: Response) {
         gstNumber: typeof gstNumber === "string" && gstNumber.trim().length > 0 ? gstNumber.trim() : null,
       },
     });
+
+    if (profile.profileType === "SUPPLIER") {
+      // First Supplier profile under a phone number claims any pending group invites for it.
+      await prisma.groupSupplier.updateMany({
+        where: { phoneNumber, supplierProfileId: null },
+        data: { supplierProfileId: profile.id },
+      });
+    }
+
     res.status(201).json({ profile });
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {

@@ -52,7 +52,10 @@ export default function GroupListScreen({ navigation }: any) {
           <TouchableOpacity style={styles.row} onPress={() => navigation.navigate("GroupDetail", { groupId: item.id })}>
             <Avatar label={item.name} />
             <View style={styles.rowText}>
-              <Text style={styles.rowTitle}>{item.name}</Text>
+              <View style={styles.rowTitleLine}>
+                <Text style={styles.rowTitle}>{item.name}</Text>
+                {item.hasUnread && <View style={styles.unreadDot} />}
+              </View>
               <Text style={styles.rowSubtitle}>
                 {isBuyer ? `${item._count?.suppliers ?? 0} supplier(s)` : item.buyerProfile?.companyName}
               </Text>
@@ -86,7 +89,9 @@ const styles = StyleSheet.create({
   logout: { color: "#128C7E", fontWeight: "600" },
   row: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
   rowText: { flex: 1 },
+  rowTitleLine: { flexDirection: "row", alignItems: "center", gap: 6 },
   rowTitle: { fontSize: 16, fontWeight: "600" },
+  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#FF3B30" },
   rowSubtitle: { fontSize: 13, color: "#777", marginTop: 2 },
   emptyContainer: { flexGrow: 1, justifyContent: "center", alignItems: "center" },
   emptyText: { color: "#888", textAlign: "center", paddingHorizontal: 32 },

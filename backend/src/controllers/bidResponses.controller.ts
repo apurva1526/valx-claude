@@ -25,6 +25,9 @@ export async function submitResponse(req: ProfileScopedRequest, res: Response) {
   if (bid.status !== "ONGOING") {
     return res.status(400).json({ error: "This bid is closed" });
   }
+  if (bid.validityDeadline.getTime() <= Date.now()) {
+    return res.status(400).json({ error: "This bid's validity has expired" });
+  }
 
   const parsedPrice = Number(price);
   if (isNaN(parsedPrice) || parsedPrice <= 0) {

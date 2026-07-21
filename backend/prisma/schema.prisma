@@ -35,6 +35,7 @@ model Profile {
   groupMemberships GroupSupplier[]
   bidsCreated      Bid[]
   bidResponses     BidResponse[]
+  notifications    Notification[]
 
   @@unique([phoneNumber, companyName, profileType])
 }
@@ -76,7 +77,25 @@ model Bid {
   createdByProfile    Profile   @relation(fields: [createdByProfileId], references: [id])
   createdAt           DateTime  @default(now())
 
-  responses BidResponse[]
+  responses     BidResponse[]
+  notifications Notification[]
+}
+
+enum NotificationType {
+  BID_EDITED
+  BID_CREATED
+}
+
+model Notification {
+  id                 String           @id @default(uuid())
+  recipientProfileId String
+  recipientProfile   Profile          @relation(fields: [recipientProfileId], references: [id])
+  type               NotificationType
+  message            String
+  bidId              String?
+  bid                Bid?             @relation(fields: [bidId], references: [id])
+  createdAt          DateTime         @default(now())
+  readAt             DateTime?
 }
 
 model BidResponse {

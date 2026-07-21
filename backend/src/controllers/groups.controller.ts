@@ -28,20 +28,32 @@ export async function createGroup(req: ProfileScopedRequest, res: Response) {
 export async function getMyGroups(req: ProfileScopedRequest, res: Response) {
   const { id: profileId, profileType } = req.profile!;
 
-  const groups =
-    profileType === "BUYER"
-      ? await prisma.group.findMany({
-          where: { buyerProfileId: profileId },
-          include: { _count: { select: { suppliers: true } } },
-          orderBy: { createdAt: "desc" },
-        })
-      : await prisma.group.findMany({
-          where: { suppliers: { some: { supplierProfileId: profileId } } },
-          include: { buyerProfile: { select: { companyName: true } } },
-          orderBy: { createdAt: "desc" },
-        });
+  if (profileType === "BUYER") {
+    const groups = await prisma.group.findMany({
+      where: { buyerProfileId: profileId },
+      include: { _count: { select: { suppliers: true } } },
+      orderBy: { createdAt: "desc" },
+    });
+    return res.status(200).json({ groups });
+  }
 
-  res.status(200).json({ groups });
+  const groups = await prisma.group.findMany({
+    where: { suppliers: { some: { supplierProfileId: profileId } } },
+    include: { buyerProfile: { select: { companyName: true } } },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const unreadNotifications = await prisma.notification.findMany({
+    where: { recipientProfileId: profileId, readAt: null, bidId: { not: null } },
+    include: { bid: { select: { groupId: true } } },
+  });
+  const unreadGroupIds = new Set(
+    unreadNotifications.map((n) => n.bid?.groupId).filter((id): id is string => !!id)
+  );
+
+  res.status(200).json({
+    groups: groups.map((g) => ({ ...g, hasUnread: unreadGroupIds.has(g.id) })),
+  });
 }
 
 export async function getGroupDetail(req: ProfileScopedRequest, res: Response) {

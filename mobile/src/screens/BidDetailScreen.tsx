@@ -50,6 +50,8 @@ export default function BidDetailScreen({ route, navigation }: any) {
   }
 
   const currencySymbol = bid.targetPriceCurrency === "USD" ? "$" : "₹";
+  const isExpired = bid.status === "ONGOING" && new Date(bid.validityDeadline).getTime() <= Date.now();
+  const statusLabel = bid.status !== "ONGOING" ? "Closed" : isExpired ? "Expired" : "Ongoing";
 
   return (
     <View style={styles.container}>
@@ -58,13 +60,19 @@ export default function BidDetailScreen({ route, navigation }: any) {
           <Text style={styles.back}>{"‹ Back"}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Bid Details</Text>
-        <View style={{ width: 50 }} />
+        {isBuyer ? (
+          <TouchableOpacity onPress={() => navigation.navigate("EditBid", { bid })}>
+            <Text style={styles.editLink}>Edit</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 50 }} />
+        )}
       </View>
 
       <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
         <View style={styles.statusRow}>
-          <View style={[styles.statusDot, bid.status === "ONGOING" ? styles.dotOngoing : styles.dotClosed]} />
-          <Text style={styles.statusText}>{bid.status === "ONGOING" ? "Ongoing" : "Closed"}</Text>
+          <View style={[styles.statusDot, statusLabel === "Ongoing" ? styles.dotOngoing : styles.dotClosed]} />
+          <Text style={styles.statusText}>{statusLabel}</Text>
         </View>
 
         <Text style={styles.title}>{bid.title}</Text>
@@ -100,10 +108,13 @@ export default function BidDetailScreen({ route, navigation }: any) {
             {buyerResponses.length === 0 ? (
               <Text style={styles.emptyText}>No responses yet.</Text>
             ) : (
-              buyerResponses.map((r) => (
+              buyerResponses.map((r, index) => (
                 <View key={r.supplierProfileId} style={styles.responseCard}>
                   <View style={styles.responseHeader}>
-                    <Text style={styles.responseName}>{r.companyName}</Text>
+                    <Text style={styles.responseName}>
+                      <Text style={styles.responseRank}>#{index + 1} </Text>
+                      {r.companyName}
+                    </Text>
                     <Text style={styles.responsePrice}>
                       {currencySymbol}
                       {r.price}
@@ -168,9 +179,13 @@ export default function BidDetailScreen({ route, navigation }: any) {
               </View>
             )}
 
-            <TouchableOpacity style={styles.bidButton} onPress={() => setModalVisible(true)}>
-              <Text style={styles.bidButtonText}>{yourResponse ? "Revise Bid" : "Make Bid"}</Text>
-            </TouchableOpacity>
+            {isExpired ? (
+              <Text style={styles.expiredNotice}>This bid's validity has expired — no further bids can be placed.</Text>
+            ) : (
+              <TouchableOpacity style={styles.bidButton} onPress={() => setModalVisible(true)}>
+                <Text style={styles.bidButtonText}>{yourResponse ? "Revise Bid" : "Make Bid"}</Text>
+              </TouchableOpacity>
+            )}
           </>
         )}
       </ScrollView>
@@ -205,6 +220,7 @@ const styles = StyleSheet.create({
   },
   back: { color: "#128C7E", fontWeight: "600", width: 50 },
   headerTitle: { fontSize: 17, fontWeight: "700" },
+  editLink: { color: "#128C7E", fontWeight: "600", width: 50, textAlign: "right" },
   body: { flex: 1 },
   bodyContent: { padding: 20, paddingBottom: 40 },
   statusRow: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
@@ -223,6 +239,7 @@ const styles = StyleSheet.create({
   responseCard: { borderWidth: 1, borderColor: "#eee", borderRadius: 10, padding: 14, marginBottom: 10 },
   responseHeader: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
   responseName: { fontSize: 15, fontWeight: "700" },
+  responseRank: { color: "#128C7E" },
   responsePrice: { fontSize: 15, fontWeight: "700", color: "#128C7E" },
   responseComment: { fontSize: 13, color: "#555", marginBottom: 6, fontStyle: "italic" },
   responseMeta: { fontSize: 11, color: "#999" },
@@ -244,4 +261,5 @@ const styles = StyleSheet.create({
   rankSummaryValue: { fontSize: 18, fontWeight: "700", color: "#128C7E" },
   bidButton: { backgroundColor: "#128C7E", borderRadius: 8, padding: 14, alignItems: "center", marginTop: 12 },
   bidButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  expiredNotice: { color: "#999", fontSize: 13, textAlign: "center", marginTop: 12, fontStyle: "italic" },
 });

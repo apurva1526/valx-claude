@@ -63,26 +63,31 @@ export default function GroupDetailScreen({ route, navigation }: any) {
             {isBuyer ? "No bids yet. Tap + to raise one." : "No bids have been raised in this group yet."}
           </Text>
         }
-        renderItem={({ item }) => (
-          <TouchableOpacity style={styles.bidRow} onPress={() => navigation.navigate("BidDetail", { bidId: item.id })}>
-            <View style={styles.bidRowHeader}>
-              <View style={[styles.statusDot, item.status === "ONGOING" ? styles.dotOngoing : styles.dotClosed]} />
-              <Text style={styles.bidTitle} numberOfLines={1}>
-                {item.title}
+        renderItem={({ item }) => {
+          const isExpired = item.status === "ONGOING" && new Date(item.validityDeadline).getTime() <= Date.now();
+          const statusLabel = item.status !== "ONGOING" ? "Closed" : isExpired ? "Expired" : "Ongoing";
+          return (
+            <TouchableOpacity style={styles.bidRow} onPress={() => navigation.navigate("BidDetail", { bidId: item.id })}>
+              <View style={styles.bidRowHeader}>
+                <View style={[styles.statusDot, statusLabel === "Ongoing" ? styles.dotOngoing : styles.dotClosed]} />
+                <Text style={styles.bidTitle} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                {statusLabel !== "Ongoing" && <Text style={styles.statusBadge}>{statusLabel}</Text>}
+              </View>
+              <Text style={styles.bidDescription} numberOfLines={2}>
+                {item.description}
               </Text>
-            </View>
-            <Text style={styles.bidDescription} numberOfLines={2}>
-              {item.description}
-            </Text>
-            {item.targetPrice != null && (
-              <Text style={styles.bidPrice}>
-                Target: {item.targetPriceCurrency === "USD" ? "$" : "₹"}
-                {item.targetPrice}
-              </Text>
-            )}
-            <Text style={styles.bidMeta}>Valid till {new Date(item.validityDeadline).toLocaleString()}</Text>
-          </TouchableOpacity>
-        )}
+              {item.targetPrice != null && (
+                <Text style={styles.bidPrice}>
+                  Target: {item.targetPriceCurrency === "USD" ? "$" : "₹"}
+                  {item.targetPrice}
+                </Text>
+              )}
+              <Text style={styles.bidMeta}>Valid till {new Date(item.validityDeadline).toLocaleString()}</Text>
+            </TouchableOpacity>
+          );
+        }}
       />
 
       {isBuyer && (
@@ -125,6 +130,7 @@ const styles = StyleSheet.create({
   dotOngoing: { backgroundColor: "#25D366" },
   dotClosed: { backgroundColor: "#999" },
   bidTitle: { fontSize: 16, fontWeight: "700", flex: 1 },
+  statusBadge: { fontSize: 11, color: "#999", fontWeight: "600" },
   bidDescription: { fontSize: 13, color: "#555", marginBottom: 6 },
   bidPrice: { fontSize: 13, color: "#128C7E", fontWeight: "600", marginBottom: 4 },
   bidMeta: { fontSize: 12, color: "#888" },

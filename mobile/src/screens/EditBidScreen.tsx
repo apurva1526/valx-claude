@@ -1,20 +1,20 @@
 import React, { useState } from "react";
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity } from "react-native";
 import { useAuth } from "../context/AuthContext";
-import { createBid, Currency } from "../api/bids";
+import { Currency, updateBid } from "../api/bids";
 import BidFormFields from "../components/BidFormFields";
 
-export default function CreateBidScreen({ route, navigation }: any) {
-  const { groupId } = route.params;
+export default function EditBidScreen({ route, navigation }: any) {
+  const { bid } = route.params;
   const { token, activeProfile } = useAuth();
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [targetPrice, setTargetPrice] = useState("");
-  const [currency, setCurrency] = useState<Currency>("INR");
-  const [deadline, setDeadline] = useState<Date>(new Date(Date.now() + 24 * 60 * 60 * 1000));
+  const [title, setTitle] = useState(bid.title);
+  const [description, setDescription] = useState(bid.description);
+  const [targetPrice, setTargetPrice] = useState(bid.targetPrice != null ? String(bid.targetPrice) : "");
+  const [currency, setCurrency] = useState<Currency>(bid.targetPriceCurrency);
+  const [deadline, setDeadline] = useState<Date>(new Date(bid.validityDeadline));
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleCreate = async () => {
+  const handleSave = async () => {
     if (!title.trim() || !description.trim()) {
       Alert.alert("Title and description are required");
       return;
@@ -25,20 +25,16 @@ export default function CreateBidScreen({ route, navigation }: any) {
     }
     setIsSubmitting(true);
     try {
-      const { bid } = await createBid(
-        { token: token!, profileId: activeProfile!.id },
-        groupId,
-        {
-          title: title.trim(),
-          description: description.trim(),
-          validityDeadline: deadline.toISOString(),
-          targetPrice: targetPrice.trim() ? Number(targetPrice.trim()) : undefined,
-          targetPriceCurrency: currency,
-        }
-      );
-      navigation.replace("BidDetail", { bidId: bid.id });
+      await updateBid({ token: token!, profileId: activeProfile!.id }, bid.id, {
+        title: title.trim(),
+        description: description.trim(),
+        validityDeadline: deadline.toISOString(),
+        targetPrice: targetPrice.trim() ? Number(targetPrice.trim()) : undefined,
+        targetPriceCurrency: currency,
+      });
+      navigation.goBack();
     } catch (err: any) {
-      Alert.alert("Couldn't create bid", err.message ?? "Please try again");
+      Alert.alert("Couldn't save changes", err.message ?? "Please try again");
     } finally {
       setIsSubmitting(false);
     }
@@ -46,7 +42,8 @@ export default function CreateBidScreen({ route, navigation }: any) {
 
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>New Bid</Text>
+      <Text style={styles.title}>Edit Bid</Text>
+      <Text style={styles.notice}>Every supplier on this bid will be notified of the change.</Text>
 
       <BidFormFields
         title={title}
@@ -61,8 +58,8 @@ export default function CreateBidScreen({ route, navigation }: any) {
         onDeadlineChange={setDeadline}
       />
 
-      <TouchableOpacity style={styles.button} onPress={handleCreate} disabled={isSubmitting}>
-        {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Post Bid</Text>}
+      <TouchableOpacity style={styles.button} onPress={handleSave} disabled={isSubmitting}>
+        {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Changes</Text>}
       </TouchableOpacity>
     </ScrollView>
   );
@@ -70,7 +67,8 @@ export default function CreateBidScreen({ route, navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flexGrow: 1, padding: 24, paddingTop: 64, backgroundColor: "#fff" },
-  title: { fontSize: 22, fontWeight: "700", marginBottom: 24 },
+  title: { fontSize: 22, fontWeight: "700", marginBottom: 8 },
+  notice: { fontSize: 13, color: "#888", marginBottom: 20 },
   button: { backgroundColor: "#128C7E", borderRadius: 8, padding: 14, alignItems: "center" },
   buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
 });

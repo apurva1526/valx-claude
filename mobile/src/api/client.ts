@@ -56,3 +56,7 @@ export function get<T>(path: string, auth?: AuthContext): Promise<T> {
 export function post<T>(path: string, data: unknown, auth?: AuthContext): Promise<T> {
   return request<T>(path, { method: "POST", body: JSON.stringify(data), ...auth });
 }
+
+export function patch<T>(path: string, data: unknown, auth?: AuthContext): Promise<T> {
+  return request<T>(path, { method: "PATCH", body: JSON.stringify(data), ...auth });
+}

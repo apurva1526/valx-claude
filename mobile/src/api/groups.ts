@@ -16,6 +16,7 @@ export interface GroupListItem {
   createdAt: string;
   _count?: { suppliers: number };
   buyerProfile?: { companyName: string };
+  hasUnread?: boolean;
 }
 
 export interface BuyerGroupDetail {

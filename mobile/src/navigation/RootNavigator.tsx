@@ -10,7 +10,10 @@ import ProfileSetupScreen from "../screens/ProfileSetupScreen";
 import GroupListScreen from "../screens/GroupListScreen";
 import CreateGroupScreen from "../screens/CreateGroupScreen";
 import GroupDetailScreen from "../screens/GroupDetailScreen";
+import GroupSuppliersScreen from "../screens/GroupSuppliersScreen";
 import AddSuppliersScreen from "../screens/AddSuppliersScreen";
+import CreateBidScreen from "../screens/CreateBidScreen";
+import BidDetailScreen from "../screens/BidDetailScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -72,7 +75,10 @@ export default function RootNavigator() {
             <Stack.Screen name="GroupList" component={GroupListScreen} />
             <Stack.Screen name="CreateGroup" component={CreateGroupScreen} />
             <Stack.Screen name="GroupDetail" component={GroupDetailScreen} />
+            <Stack.Screen name="GroupSuppliers" component={GroupSuppliersScreen} />
             <Stack.Screen name="AddSuppliers" component={AddSuppliersScreen} />
+            <Stack.Screen name="CreateBid" component={CreateBidScreen} />
+            <Stack.Screen name="BidDetail" component={BidDetailScreen} />
           </>
         )}
       </Stack.Navigator>

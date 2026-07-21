@@ -28,7 +28,8 @@
         {
           "contactsPermission": "ValX uses your contacts so you can add suppliers you already know to a group."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ]
   }
 }

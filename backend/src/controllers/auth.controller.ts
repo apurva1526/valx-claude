@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma";
 import { env } from "../config/env";
 import { sendOtp, verifyOtp } from "../services/otp";
+import { normalizePhoneNumber } from "../lib/phone";
 
 export async function requestOtp(req: Request, res: Response) {
   const { phoneNumber } = req.body ?? {};
@@ -10,15 +11,16 @@ export async function requestOtp(req: Request, res: Response) {
     return res.status(400).json({ error: "phoneNumber is required" });
   }
 
-  await sendOtp(phoneNumber);
+  await sendOtp(normalizePhoneNumber(phoneNumber));
   res.status(200).json({ ok: true });
 }
 
 export async function verifyOtpHandler(req: Request, res: Response) {
-  const { phoneNumber, otp } = req.body ?? {};
-  if (typeof phoneNumber !== "string" || typeof otp !== "string") {
+  const { phoneNumber: rawPhoneNumber, otp } = req.body ?? {};
+  if (typeof rawPhoneNumber !== "string" || typeof otp !== "string") {
     return res.status(400).json({ error: "phoneNumber and otp are required" });
   }
+  const phoneNumber = normalizePhoneNumber(rawPhoneNumber);
 
   if (!verifyOtp(phoneNumber, otp)) {
     return res.status(401).json({ error: "Invalid OTP" });

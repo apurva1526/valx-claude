@@ -33,6 +33,7 @@ model Profile {
 
   groupsOwned      Group[]         @relation("BuyerGroups")
   groupMemberships GroupSupplier[]
+  bidsCreated      Bid[]
 
   @@unique([phoneNumber, companyName, profileType])
 }
@@ -47,6 +48,32 @@ model Group {
   createdAt      DateTime @default(now())
 
   suppliers GroupSupplier[]
+  bids      Bid[]
+}
+
+enum BidStatus {
+  ONGOING
+  CLOSED
+}
+
+enum Currency {
+  INR
+  USD
+}
+
+model Bid {
+  id                  String    @id @default(uuid())
+  groupId             String
+  group               Group     @relation(fields: [groupId], references: [id])
+  title               String
+  description         String
+  targetPrice         Float?
+  targetPriceCurrency Currency  @default(INR)
+  validityDeadline    DateTime
+  status              BidStatus @default(ONGOING)
+  createdByProfileId  String
+  createdByProfile    Profile   @relation(fields: [createdByProfileId], references: [id])
+  createdAt           DateTime  @default(now())
 }
 
 model GroupSupplier {

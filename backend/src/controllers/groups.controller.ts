@@ -1,6 +1,8 @@
 import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { ProfileScopedRequest } from "../middleware/activeProfile";
+import { getGroupForProfile } from "../lib/groupAccess";
+import { normalizePhoneNumber } from "../lib/phone";
 
 export async function createGroup(req: ProfileScopedRequest, res: Response) {
   if (req.profile!.profileType !== "BUYER") {
@@ -43,31 +45,18 @@ export async function getMyGroups(req: ProfileScopedRequest, res: Response) {
 }
 
 export async function getGroupDetail(req: ProfileScopedRequest, res: Response) {
-  const { id: profileId, profileType } = req.profile!;
   const { id: groupId } = req.params;
-
-  const group = await prisma.group.findUnique({
-    where: { id: groupId },
-    include: {
-      buyerProfile: { select: { companyName: true } },
-      suppliers: true,
-    },
-  });
+  const { group, isMember } = await getGroupForProfile(groupId, req.profile!);
 
   if (!group) {
     return res.status(404).json({ error: "Group not found" });
   }
-
-  if (profileType === "BUYER") {
-    if (group.buyerProfileId !== profileId) {
-      return res.status(403).json({ error: "Not your group" });
-    }
-    return res.status(200).json({ group });
+  if (!isMember) {
+    return res.status(403).json({ error: "You are not a member of this group" });
   }
 
-  const membership = group.suppliers.find((s) => s.supplierProfileId === profileId);
-  if (!membership) {
-    return res.status(403).json({ error: "You are not a member of this group" });
+  if (req.profile!.profileType === "BUYER") {
+    return res.status(200).json({ group });
   }
 
   res.status(200).json({
@@ -101,8 +90,10 @@ export async function addSuppliers(req: ProfileScopedRequest, res: Response) {
 
   const results = [];
   for (const contact of contacts) {
-    const phoneNumber = typeof contact?.phoneNumber === "string" ? contact.phoneNumber.trim() : "";
+    const rawPhoneNumber = typeof contact?.phoneNumber === "string" ? contact.phoneNumber.trim() : "";
     const name = typeof contact?.name === "string" ? contact.name.trim() : null;
+    if (!rawPhoneNumber) continue;
+    const phoneNumber = normalizePhoneNumber(rawPhoneNumber);
     if (!phoneNumber) continue;
 
     const existingSupplierProfile = await prisma.profile.findFirst({

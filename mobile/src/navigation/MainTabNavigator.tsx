@@ -17,6 +17,8 @@ import UpdatesScreen from "../screens/UpdatesScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import TeamMembersScreen from "../screens/TeamMembersScreen";
 import AddTeamMemberScreen from "../screens/AddTeamMemberScreen";
+import SwitchProfileScreen from "../screens/SwitchProfileScreen";
+import AddProfileScreen from "../screens/AddProfileScreen";
 
 const ChatsStack = createNativeStackNavigator();
 function ChatsStackNavigator() {
@@ -53,6 +55,8 @@ function ProfileStackNavigator() {
       <ProfileStack.Screen name="ProfileHome" component={ProfileScreen} />
       <ProfileStack.Screen name="TeamMembers" component={TeamMembersScreen} />
       <ProfileStack.Screen name="AddTeamMember" component={AddTeamMemberScreen} />
+      <ProfileStack.Screen name="SwitchProfile" component={SwitchProfileScreen} />
+      <ProfileStack.Screen name="AddProfile" component={AddProfileScreen} />
     </ProfileStack.Navigator>
   );
 }

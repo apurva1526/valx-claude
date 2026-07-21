@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { useAuth } from "../context/AuthContext";
+import { getLastActiveProfileId, useAuth } from "../context/AuthContext";
 import { getMyProfiles } from "../api/auth";
 import PhoneEntryScreen from "../screens/PhoneEntryScreen";
 import OtpVerifyScreen from "../screens/OtpVerifyScreen";
@@ -27,11 +27,14 @@ export default function RootNavigator() {
     }
     setIsRestoringProfile(true);
     setRestoreError(null);
-    getMyProfiles(token)
-      .then(({ profiles, name }) => {
+    Promise.all([getMyProfiles(token), getLastActiveProfileId()])
+      .then(([{ profiles, name }, lastProfileId]) => {
         setHasProfiles(profiles.length > 0);
         setUserName(name);
-        if (profiles.length > 0) setActiveProfile(profiles[0]);
+        if (profiles.length > 0) {
+          const restored = profiles.find((p) => p.id === lastProfileId) ?? profiles[0];
+          setActiveProfile(restored);
+        }
       })
       .catch((err) => setRestoreError(err.message ?? "Couldn't reach the server"))
       .finally(() => setIsRestoringProfile(false));

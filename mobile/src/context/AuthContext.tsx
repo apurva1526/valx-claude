@@ -3,6 +3,7 @@ import * as SecureStore from "expo-secure-store";
 import { Profile } from "../api/auth";
 
 const TOKEN_KEY = "valx_token";
+const LAST_PROFILE_KEY = "valx_last_active_profile_id";
 
 interface AuthContextValue {
   isLoading: boolean;
@@ -37,17 +38,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await SecureStore.deleteItemAsync(TOKEN_KEY);
+    await SecureStore.deleteItemAsync(LAST_PROFILE_KEY);
     setToken(null);
     setActiveProfile(null);
     setUserName(null);
   };
 
+  const chooseActiveProfile = (profile: Profile) => {
+    setActiveProfile(profile);
+    SecureStore.setItemAsync(LAST_PROFILE_KEY, profile.id).catch(() => {});
+  };
+
   const value = useMemo(
-    () => ({ isLoading, token, activeProfile, userName, signIn, signOut, setActiveProfile, setUserName }),
+    () => ({
+      isLoading,
+      token,
+      activeProfile,
+      userName,
+      signIn,
+      signOut,
+      setActiveProfile: chooseActiveProfile,
+      setUserName,
+    }),
     [isLoading, token, activeProfile, userName]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function getLastActiveProfileId(): Promise<string | null> {
+  return SecureStore.getItemAsync(LAST_PROFILE_KEY);
 }
 
 export function useAuth(): AuthContextValue {

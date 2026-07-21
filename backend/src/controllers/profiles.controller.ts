@@ -2,6 +2,7 @@ import { Response } from "express";
 import { Prisma, ProfileType } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { AuthedRequest } from "../middleware/auth";
+import { resolveProfileAccess } from "../lib/profileAccess";
 
 export async function getMyProfiles(req: AuthedRequest, res: Response) {
   const userId = req.user!.userId;
@@ -65,4 +66,17 @@ export async function createProfile(req: AuthedRequest, res: Response) {
     }
     throw err;
   }
+}
+
+export async function switchProfile(req: AuthedRequest, res: Response) {
+  const { id } = req.params;
+
+  const resolved = await resolveProfileAccess(id, req.user!.userId);
+  if (!resolved) {
+    return res.status(403).json({ error: "Profile does not belong to the authenticated user" });
+  }
+
+  res.status(200).json({
+    profile: { ...resolved.profile, access: resolved.level, scopeGroupId: resolved.scopeGroupId },
+  });
 }

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth";
-import { createProfile, getMyProfiles } from "../controllers/profiles.controller";
+import { createProfile, getMyProfiles, switchProfile } from "../controllers/profiles.controller";
 import { addTeamMember, listTeamMembers } from "../controllers/teamMembers.controller";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { requireActiveProfile } from "../middleware/activeProfile";
@@ -11,6 +11,7 @@ export const profilesRouter = Router();
 profilesRouter.use(requireAuth);
 profilesRouter.get("/me", asyncHandler(getMyProfiles));
 profilesRouter.post("/", asyncHandler(createProfile));
+profilesRouter.post("/:id/switch", asyncHandler(switchProfile));
 profilesRouter.post(
   "/:id/team-members",
   asyncHandler(requireActiveProfile),

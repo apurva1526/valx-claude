@@ -34,8 +34,12 @@ export default function ProfileScreen({ navigation }: any) {
           <Text style={styles.value}>{activeProfile?.gstNumber ?? "Not set"}</Text>
         </View>
 
+        <TouchableOpacity style={styles.teamButton} onPress={() => navigation.navigate("SwitchProfile")}>
+          <Text style={styles.teamButtonText}>Switch Profile</Text>
+        </TouchableOpacity>
+
         {canManageTeam && (
-          <TouchableOpacity style={styles.teamButton} onPress={() => navigation.navigate("TeamMembers")}>
+          <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate("TeamMembers")}>
             <Text style={styles.teamButtonText}>Team Members</Text>
           </TouchableOpacity>
         )}
@@ -67,6 +71,7 @@ const styles = StyleSheet.create({
   label: { fontSize: 14, color: "#888" },
   value: { fontSize: 14, fontWeight: "600" },
   teamButton: { marginTop: 32, backgroundColor: "#F0FBF9", borderRadius: 8, paddingVertical: 14, alignItems: "center" },
+  secondaryButton: { marginTop: 12, backgroundColor: "#F0FBF9", borderRadius: 8, paddingVertical: 14, alignItems: "center" },
   teamButtonText: { color: "#128C7E", fontWeight: "600" },
   logoutButton: { marginTop: 12, backgroundColor: "#eee", borderRadius: 8, paddingVertical: 14, alignItems: "center" },
   logoutText: { color: "#333", fontWeight: "600" },

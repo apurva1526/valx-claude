@@ -27,9 +27,13 @@ export function getMyProfiles(token: string): Promise<{ profiles: Profile[]; nam
 
 export function createProfile(
   token: string,
-  data: { name: string; companyName: string; profileType: ProfileType; gstNumber?: string }
+  data: { name?: string; companyName: string; profileType: ProfileType; gstNumber?: string }
 ): Promise<{ profile: Profile }> {
   return post("/profiles", data, { token });
+}
+
+export function switchProfile(token: string, profileId: string): Promise<{ profile: Profile }> {
+  return post(`/profiles/${profileId}/switch`, {}, { token });
 }
 
 export function setMyName(token: string, name: string): Promise<{ name: string }> {

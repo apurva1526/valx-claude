@@ -4,11 +4,20 @@ import { prisma } from "../lib/prisma";
 import { AuthedRequest } from "../middleware/auth";
 
 export async function getMyProfiles(req: AuthedRequest, res: Response) {
-  const profiles = await prisma.profile.findMany({
-    where: { userId: req.user!.userId },
-    orderBy: { createdAt: "asc" },
-  });
-  res.status(200).json({ profiles });
+  const userId = req.user!.userId;
+
+  const [user, ownedProfiles, teamMemberships] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId } }),
+    prisma.profile.findMany({ where: { userId }, orderBy: { createdAt: "asc" } }),
+    prisma.teamMember.findMany({ where: { userId }, include: { profile: true }, orderBy: { createdAt: "asc" } }),
+  ]);
+
+  const profiles = [
+    ...ownedProfiles.map((p) => ({ ...p, access: "OWNER" as const, scopeGroupId: null })),
+    ...teamMemberships.map((tm) => ({ ...tm.profile, access: tm.accessLevel, scopeGroupId: tm.scopeGroupId })),
+  ];
+
+  res.status(200).json({ profiles, name: user?.name ?? null });
 }
 
 export async function createProfile(req: AuthedRequest, res: Response) {

@@ -62,9 +62,19 @@ export function attachChatWebSocketServer(server: Server): void {
     }
 
     const profile = await prisma.profile.findUnique({ where: { id: profileId } });
-    if (!profile || profile.userId !== userId) {
+    if (!profile) {
       ws.close(4003, "Profile does not belong to the authenticated user");
       return;
+    }
+
+    let scopeGroupId: string | null = null;
+    if (profile.userId !== userId) {
+      const teamMember = await prisma.teamMember.findFirst({ where: { profileId: profile.id, userId } });
+      if (!teamMember) {
+        ws.close(4003, "Profile does not belong to the authenticated user");
+        return;
+      }
+      scopeGroupId = teamMember.scopeGroupId;
     }
 
     const bid = await prisma.bid.findUnique({ where: { id: bidId } });
@@ -74,7 +84,7 @@ export function attachChatWebSocketServer(server: Server): void {
     }
 
     const { isMember } = await getGroupForProfile(bid.groupId, { id: profile.id, profileType: profile.profileType });
-    if (!isMember) {
+    if (!isMember || (scopeGroupId !== null && scopeGroupId !== bid.groupId)) {
       ws.close(4003, "Not a member of this bid's group");
       return;
     }

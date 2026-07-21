@@ -20,6 +20,7 @@ export default function BidDetailScreen({ route, navigation }: any) {
   const [closeModalVisible, setCloseModalVisible] = useState(false);
 
   const isBuyer = activeProfile?.profileType === "BUYER";
+  const canEdit = activeProfile?.access === "OWNER" || activeProfile?.access === "MANAGE" || activeProfile?.access === "EDIT";
   const auth = { token: token!, profileId: activeProfile!.id };
 
   const load = useCallback(() => {
@@ -165,9 +166,11 @@ export default function BidDetailScreen({ route, navigation }: any) {
                 )}
               </View>
             ) : (
-              <TouchableOpacity style={styles.closeBidButton} onPress={() => setCloseModalVisible(true)}>
-                <Text style={styles.closeBidButtonText}>Close Bid</Text>
-              </TouchableOpacity>
+              canEdit && (
+                <TouchableOpacity style={styles.closeBidButton} onPress={() => setCloseModalVisible(true)}>
+                  <Text style={styles.closeBidButtonText}>Close Bid</Text>
+                </TouchableOpacity>
+              )
             )}
           </>
         ) : (

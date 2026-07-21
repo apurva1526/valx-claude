@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma";
 import { env } from "../config/env";
 import { sendOtp, verifyOtp } from "../services/otp";
 import { normalizePhoneNumber } from "../lib/phone";
+import { AuthedRequest } from "../middleware/auth";
 
 export async function requestOtp(req: Request, res: Response) {
   const { phoneNumber } = req.body ?? {};
@@ -32,9 +33,30 @@ export async function verifyOtpHandler(req: Request, res: Response) {
     create: { phoneNumber },
   });
 
+  // Claim any pending team-member invites for this phone number (added before this person ever signed up).
+  await prisma.teamMember.updateMany({
+    where: { phoneNumber, userId: null },
+    data: { userId: user.id },
+  });
+
   const token = jwt.sign({ userId: user.id, phoneNumber: user.phoneNumber }, env.jwtSecret, {
     expiresIn: "30d",
   });
 
   res.status(200).json({ token });
+}
+
+export async function setMyName(req: AuthedRequest, res: Response) {
+  const { name } = req.body ?? {};
+
+  if (typeof name !== "string" || name.trim().length === 0) {
+    return res.status(400).json({ error: "name is required" });
+  }
+
+  const user = await prisma.user.update({
+    where: { id: req.user!.userId },
+    data: { name: name.trim() },
+  });
+
+  res.status(200).json({ name: user.name });
 }

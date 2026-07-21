@@ -1,73 +1,18 @@
-import React, { useEffect, useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import * as Contacts from "expo-contacts";
+import React, { useState } from "react";
+import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import { addSuppliers } from "../api/groups";
-
-interface ContactEntry {
-  id: string;
-  name: string;
-  phoneNumber: string;
-}
+import { useContactsPicker } from "../hooks/useContactsPicker";
 
 export default function AddSuppliersScreen({ route, navigation }: any) {
   const { groupId } = route.params;
   const { token, activeProfile } = useAuth();
-  const [contacts, setContacts] = useState<ContactEntry[]>([]);
-  const [isLoadingContacts, setIsLoadingContacts] = useState(true);
-  const [permissionDenied, setPermissionDenied] = useState(false);
-  const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const { isLoadingContacts, permissionDenied, search, setSearch, filtered, selected, toggle, selectedContacts } =
+    useContactsPicker();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      const { status } = await Contacts.requestPermissionsAsync();
-      if (status !== "granted") {
-        setPermissionDenied(true);
-        setIsLoadingContacts(false);
-        return;
-      }
-
-      const { data } = await Contacts.getContactsAsync({ fields: [Contacts.Fields.PhoneNumbers] });
-      const entries: ContactEntry[] = data
-        .filter((c) => c.phoneNumbers && c.phoneNumbers.length > 0 && c.name)
-        .map((c) => ({
-          id: c.id!,
-          name: c.name!,
-          phoneNumber: c.phoneNumbers![0].number!.replace(/[\s\-()]/g, ""),
-        }));
-      setContacts(entries);
-      setIsLoadingContacts(false);
-    })();
-  }, []);
-
-  const filtered = useMemo(
-    () => contacts.filter((c) => c.name.toLowerCase().includes(search.toLowerCase())),
-    [contacts, search]
-  );
-
-  const toggle = (id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
   const handleSubmit = async () => {
-    const chosen = contacts.filter((c) => selected.has(c.id));
-    if (chosen.length === 0) {
+    if (selectedContacts.length === 0) {
       Alert.alert("Select at least one contact");
       return;
     }
@@ -76,7 +21,7 @@ export default function AddSuppliersScreen({ route, navigation }: any) {
       await addSuppliers(
         { token: token!, profileId: activeProfile!.id },
         groupId,
-        chosen.map((c) => ({ phoneNumber: c.phoneNumber, name: c.name }))
+        selectedContacts.map((c) => ({ phoneNumber: c.phoneNumber, name: c.name }))
       );
       navigation.goBack();
     } catch (err: any) {

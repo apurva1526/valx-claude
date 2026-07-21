@@ -5,6 +5,7 @@ import { ProfileScopedRequest } from "../middleware/activeProfile";
 import { getGroupForProfile } from "../lib/groupAccess";
 import { notifyGroupSuppliers } from "../lib/notifications";
 import { getChatFirestore } from "../lib/firebase";
+import { assertGroupInScope } from "../middleware/requirePermission";
 
 interface ValidatedBidFields {
   title: string;
@@ -58,7 +59,7 @@ export async function createBid(req: ProfileScopedRequest, res: Response) {
   if (!group) {
     return res.status(404).json({ error: "Group not found" });
   }
-  if (!isMember) {
+  if (!isMember || !assertGroupInScope(req, groupId)) {
     return res.status(403).json({ error: "Not your group" });
   }
 
@@ -119,7 +120,7 @@ export async function updateBid(req: ProfileScopedRequest, res: Response) {
   }
 
   const { isMember } = await getGroupForProfile(existingBid.groupId, req.profile!);
-  if (!isMember || existingBid.createdByProfileId !== req.profile!.id) {
+  if (!isMember || !assertGroupInScope(req, existingBid.groupId)) {
     return res.status(403).json({ error: "Not your bid" });
   }
   if (existingBid.status !== "ONGOING") {
@@ -155,7 +156,7 @@ export async function getGroupBids(req: ProfileScopedRequest, res: Response) {
   if (!group) {
     return res.status(404).json({ error: "Group not found" });
   }
-  if (!isMember) {
+  if (!isMember || !assertGroupInScope(req, groupId)) {
     return res.status(403).json({ error: "You are not a member of this group" });
   }
 
@@ -193,7 +194,7 @@ export async function getBidDetail(req: ProfileScopedRequest, res: Response) {
   }
 
   const { isMember } = await getGroupForProfile(bid.groupId, req.profile!);
-  if (!isMember) {
+  if (!isMember || !assertGroupInScope(req, bid.groupId)) {
     return res.status(403).json({ error: "You are not a member of this bid's group" });
   }
 

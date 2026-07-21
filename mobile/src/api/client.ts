@@ -60,3 +60,7 @@ export function post<T>(path: string, data: unknown, auth?: AuthContext): Promis
 export function patch<T>(path: string, data: unknown, auth?: AuthContext): Promise<T> {
   return request<T>(path, { method: "PATCH", body: JSON.stringify(data), ...auth });
 }
+
+export function del<T>(path: string, auth?: AuthContext): Promise<T> {
+  return request<T>(path, { method: "DELETE", ...auth });
+}

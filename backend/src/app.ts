@@ -5,6 +5,7 @@ import { profilesRouter } from "./routes/profiles.routes";
 import { groupsRouter } from "./routes/groups.routes";
 import { bidsRouter } from "./routes/bids.routes";
 import { notificationsRouter } from "./routes/notifications.routes";
+import { teamMembersRouter } from "./routes/teamMembers.routes";
 
 export const app = express();
 
@@ -18,6 +19,7 @@ app.use("/profiles", profilesRouter);
 app.use("/groups", groupsRouter);
 app.use("/bids", bidsRouter);
 app.use("/notifications", notificationsRouter);
+app.use("/team-members", teamMembersRouter);
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

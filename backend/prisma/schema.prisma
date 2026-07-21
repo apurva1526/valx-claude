@@ -13,11 +13,12 @@ enum ProfileType {
 }
 
 model User {
-  id          String    @id @default(uuid())
-  phoneNumber String    @unique
-  name        String?
-  createdAt   DateTime  @default(now())
-  profiles    Profile[]
+  id              String       @id @default(uuid())
+  phoneNumber     String       @unique
+  name            String?
+  createdAt       DateTime     @default(now())
+  profiles        Profile[]
+  teamMemberships TeamMember[]
 }
 
 model Profile {
@@ -37,6 +38,7 @@ model Profile {
   bidResponses     BidResponse[]
   notifications    Notification[]
   awardsClosedBy   AwardRecord[]
+  teamMembers      TeamMember[]
 
   @@unique([phoneNumber, companyName, profileType])
 }
@@ -50,8 +52,9 @@ model Group {
   imageUrl       String?
   createdAt      DateTime @default(now())
 
-  suppliers GroupSupplier[]
-  bids      Bid[]
+  suppliers        GroupSupplier[]
+  bids             Bid[]
+  teamMemberScopes TeamMember[]
 }
 
 enum BidStatus {
@@ -152,4 +155,26 @@ model GroupSupplier {
   addedAt           DateTime @default(now())
 
   @@unique([groupId, phoneNumber])
+}
+
+enum AccessLevel {
+  VIEW
+  EDIT
+  MANAGE
+}
+
+model TeamMember {
+  id           String      @id @default(uuid())
+  profileId    String
+  profile      Profile     @relation(fields: [profileId], references: [id])
+  phoneNumber  String
+  contactName  String?
+  userId       String?
+  user         User?       @relation(fields: [userId], references: [id])
+  accessLevel  AccessLevel @default(MANAGE)
+  scopeGroupId String?
+  scopeGroup   Group?      @relation(fields: [scopeGroupId], references: [id])
+  createdAt    DateTime    @default(now())
+
+  @@unique([profileId, phoneNumber])
 }

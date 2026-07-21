@@ -14,6 +14,8 @@ export default function GroupDetailScreen({ route, navigation }: any) {
   const [filter, setFilter] = useState<"ONGOING" | "PAST">("ONGOING");
 
   const isBuyer = activeProfile?.profileType === "BUYER";
+  const canManage = activeProfile?.access === "OWNER" || activeProfile?.access === "MANAGE";
+  const canEdit = canManage || activeProfile?.access === "EDIT";
   const auth = { token: token!, profileId: activeProfile!.id };
 
   useFocusEffect(
@@ -49,9 +51,16 @@ export default function GroupDetailScreen({ route, navigation }: any) {
           {groupName}
         </Text>
         {isBuyer ? (
-          <TouchableOpacity onPress={() => navigation.navigate("GroupSuppliers", { groupId })}>
-            <Text style={styles.suppliersLink}>Suppliers</Text>
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity onPress={() => navigation.navigate("GroupSuppliers", { groupId })}>
+              <Text style={styles.suppliersLink}>Suppliers</Text>
+            </TouchableOpacity>
+            {canManage && (
+              <TouchableOpacity onPress={() => navigation.navigate("TeamMembers", { groupId })}>
+                <Text style={styles.suppliersLink}>Team</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         ) : (
           <View style={{ width: 60 }} />
         )}
@@ -112,7 +121,7 @@ export default function GroupDetailScreen({ route, navigation }: any) {
         }}
       />
 
-      {isBuyer && (
+      {isBuyer && canEdit && (
         <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate("CreateBid", { groupId })}>
           <Text style={styles.fabText}>+</Text>
         </TouchableOpacity>
@@ -137,6 +146,7 @@ const styles = StyleSheet.create({
   back: { color: "#128C7E", fontWeight: "600" },
   headerTitle: { fontSize: 17, fontWeight: "700", flex: 1, textAlign: "center", marginHorizontal: 8 },
   suppliersLink: { color: "#128C7E", fontWeight: "600" },
+  headerActions: { flexDirection: "row", gap: 14 },
   filterRow: { flexDirection: "row", paddingHorizontal: 16, paddingTop: 12, gap: 10 },
   filterOption: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 16, backgroundColor: "#f0f0f0" },
   filterOptionActive: { backgroundColor: "#128C7E" },

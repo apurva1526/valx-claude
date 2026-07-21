@@ -5,12 +5,13 @@ import { getGroupForProfile } from "../lib/groupAccess";
 import { getChatFirestore } from "../lib/firebase";
 import { buildChatMaskingContext, maskMessage, RawChatMessage } from "../lib/chatLabels";
 import { broadcastToBid } from "../ws/chatServer";
+import { assertGroupInScope } from "../middleware/requirePermission";
 
 async function loadBidAndCheckMembership(req: ProfileScopedRequest, bidId: string) {
   const bid = await prisma.bid.findUnique({ where: { id: bidId } });
   if (!bid) return { bid: null, isMember: false };
   const { isMember } = await getGroupForProfile(bid.groupId, req.profile!);
-  return { bid, isMember };
+  return { bid, isMember: isMember && assertGroupInScope(req, bid.groupId) };
 }
 
 export async function getChatHistory(req: ProfileScopedRequest, res: Response) {

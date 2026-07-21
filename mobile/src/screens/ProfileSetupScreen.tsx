@@ -9,7 +9,7 @@ export default function ProfileSetupScreen({ navigation }: any) {
   const [gstNumber, setGstNumber] = useState("");
   const [profileType, setProfileType] = useState<ProfileType>("BUYER");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { token, setActiveProfile } = useAuth();
+  const { token, setActiveProfile, setUserName } = useAuth();
 
   const handleSubmit = async () => {
     if (!name.trim() || !companyName.trim()) {
@@ -25,7 +25,8 @@ export default function ProfileSetupScreen({ navigation }: any) {
         gstNumber: gstNumber.trim() || undefined,
       });
       setActiveProfile(profile);
-      // RootNavigator swaps to Home automatically once `activeProfile` is set.
+      setUserName(name.trim());
+      // RootNavigator swaps to the main app automatically once `activeProfile`/`userName` are set.
     } catch (err: any) {
       Alert.alert("Couldn't create profile", err.message ?? "Please try again");
     } finally {

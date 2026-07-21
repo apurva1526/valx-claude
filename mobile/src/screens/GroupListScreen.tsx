@@ -11,6 +11,7 @@ export default function GroupListScreen({ navigation }: any) {
   const [isLoading, setIsLoading] = useState(true);
 
   const isBuyer = activeProfile?.profileType === "BUYER";
+  const canManage = activeProfile?.access === "OWNER" || activeProfile?.access === "MANAGE";
 
   const loadGroups = useCallback(() => {
     setIsLoading(true);
@@ -61,7 +62,7 @@ export default function GroupListScreen({ navigation }: any) {
         )}
       />
 
-      {isBuyer && (
+      {isBuyer && canManage && (
         <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate("CreateGroup")}>
           <Text style={styles.fabText}>+</Text>
         </TouchableOpacity>

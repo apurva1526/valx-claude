@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { ProfileScopedRequest } from "../middleware/activeProfile";
+import { assertGroupInScope } from "../middleware/requirePermission";
 import { getGroupForProfile } from "../lib/groupAccess";
 import { normalizePhoneNumber } from "../lib/phone";
 
@@ -27,10 +28,11 @@ export async function createGroup(req: ProfileScopedRequest, res: Response) {
 
 export async function getMyGroups(req: ProfileScopedRequest, res: Response) {
   const { id: profileId, profileType } = req.profile!;
+  const { scopeGroupId } = req.access!;
 
   if (profileType === "BUYER") {
     const groups = await prisma.group.findMany({
-      where: { buyerProfileId: profileId },
+      where: { buyerProfileId: profileId, ...(scopeGroupId ? { id: scopeGroupId } : {}) },
       include: { _count: { select: { suppliers: true } } },
       orderBy: { createdAt: "desc" },
     });
@@ -38,7 +40,10 @@ export async function getMyGroups(req: ProfileScopedRequest, res: Response) {
   }
 
   const groups = await prisma.group.findMany({
-    where: { suppliers: { some: { supplierProfileId: profileId } } },
+    where: {
+      suppliers: { some: { supplierProfileId: profileId } },
+      ...(scopeGroupId ? { id: scopeGroupId } : {}),
+    },
     include: { buyerProfile: { select: { companyName: true } } },
     orderBy: { createdAt: "desc" },
   });
@@ -63,7 +68,7 @@ export async function getGroupDetail(req: ProfileScopedRequest, res: Response) {
   if (!group) {
     return res.status(404).json({ error: "Group not found" });
   }
-  if (!isMember) {
+  if (!isMember || !assertGroupInScope(req, groupId)) {
     return res.status(403).json({ error: "You are not a member of this group" });
   }
 
@@ -96,7 +101,7 @@ export async function addSuppliers(req: ProfileScopedRequest, res: Response) {
   if (!group) {
     return res.status(404).json({ error: "Group not found" });
   }
-  if (profileType !== "BUYER" || group.buyerProfileId !== profileId) {
+  if (profileType !== "BUYER" || group.buyerProfileId !== profileId || !assertGroupInScope(req, groupId)) {
     return res.status(403).json({ error: "Only the owning Buyer can add suppliers to this group" });
   }
 

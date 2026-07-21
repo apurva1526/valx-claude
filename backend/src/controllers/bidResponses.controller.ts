@@ -2,6 +2,7 @@ import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { ProfileScopedRequest } from "../middleware/activeProfile";
 import { getGroupForProfile } from "../lib/groupAccess";
+import { assertGroupInScope } from "../middleware/requirePermission";
 
 const MAX_REVISIONS = 5;
 
@@ -19,7 +20,7 @@ export async function submitResponse(req: ProfileScopedRequest, res: Response) {
   }
 
   const { isMember } = await getGroupForProfile(bid.groupId, req.profile!);
-  if (!isMember) {
+  if (!isMember || !assertGroupInScope(req, bid.groupId)) {
     return res.status(403).json({ error: "You are not a member of this bid's group" });
   }
   if (bid.status !== "ONGOING") {
@@ -86,7 +87,7 @@ export async function getBidResponses(req: ProfileScopedRequest, res: Response) 
   }
 
   const { isMember } = await getGroupForProfile(bid.groupId, req.profile!);
-  if (!isMember) {
+  if (!isMember || !assertGroupInScope(req, bid.groupId)) {
     return res.status(403).json({ error: "You are not a member of this bid's group" });
   }
 

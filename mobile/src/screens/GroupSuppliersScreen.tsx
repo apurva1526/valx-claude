@@ -9,6 +9,7 @@ export default function GroupSuppliersScreen({ route, navigation }: any) {
   const { token, activeProfile } = useAuth();
   const [group, setGroup] = useState<BuyerGroupDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const canManage = activeProfile?.access === "OWNER" || activeProfile?.access === "MANAGE";
 
   useFocusEffect(
     useCallback(() => {
@@ -35,9 +36,13 @@ export default function GroupSuppliersScreen({ route, navigation }: any) {
           <Text style={styles.back}>{"‹ Back"}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Suppliers</Text>
-        <TouchableOpacity onPress={() => navigation.navigate("AddSuppliers", { groupId })}>
-          <Text style={styles.addLink}>+ Add</Text>
-        </TouchableOpacity>
+        {canManage ? (
+          <TouchableOpacity onPress={() => navigation.navigate("AddSuppliers", { groupId })}>
+            <Text style={styles.addLink}>+ Add</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 50 }} />
+        )}
       </View>
 
       <FlatList

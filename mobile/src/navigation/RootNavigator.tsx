@@ -7,13 +7,15 @@ import { getMyProfiles } from "../api/auth";
 import PhoneEntryScreen from "../screens/PhoneEntryScreen";
 import OtpVerifyScreen from "../screens/OtpVerifyScreen";
 import ProfileSetupScreen from "../screens/ProfileSetupScreen";
+import NameSetupScreen from "../screens/NameSetupScreen";
 import MainTabNavigator from "./MainTabNavigator";
 
 const Stack = createNativeStackNavigator();
 
 export default function RootNavigator() {
-  const { isLoading, token, activeProfile, setActiveProfile } = useAuth();
+  const { isLoading, token, activeProfile, userName, setActiveProfile, setUserName } = useAuth();
   const [isRestoringProfile, setIsRestoringProfile] = useState(true);
+  const [hasProfiles, setHasProfiles] = useState(false);
   const [restoreError, setRestoreError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
@@ -26,7 +28,9 @@ export default function RootNavigator() {
     setIsRestoringProfile(true);
     setRestoreError(null);
     getMyProfiles(token)
-      .then(({ profiles }) => {
+      .then(({ profiles, name }) => {
+        setHasProfiles(profiles.length > 0);
+        setUserName(name);
         if (profiles.length > 0) setActiveProfile(profiles[0]);
       })
       .catch((err) => setRestoreError(err.message ?? "Couldn't reach the server"))
@@ -61,9 +65,13 @@ export default function RootNavigator() {
           <Stack.Screen name="PhoneEntry" component={PhoneEntryScreen} />
           <Stack.Screen name="OtpVerify" component={OtpVerifyScreen} />
         </Stack.Navigator>
-      ) : !activeProfile ? (
+      ) : !hasProfiles && !activeProfile ? (
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
+        </Stack.Navigator>
+      ) : !userName ? (
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="NameSetup" component={NameSetupScreen} />
         </Stack.Navigator>
       ) : (
         <MainTabNavigator />

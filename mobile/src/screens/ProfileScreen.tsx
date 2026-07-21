@@ -3,8 +3,9 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import Avatar from "../components/Avatar";
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ navigation }: any) {
   const { activeProfile, signOut } = useAuth();
+  const canManageTeam = activeProfile?.access === "OWNER" || activeProfile?.access === "MANAGE";
 
   return (
     <View style={styles.container}>
@@ -33,6 +34,12 @@ export default function ProfileScreen() {
           <Text style={styles.value}>{activeProfile?.gstNumber ?? "Not set"}</Text>
         </View>
 
+        {canManageTeam && (
+          <TouchableOpacity style={styles.teamButton} onPress={() => navigation.navigate("TeamMembers")}>
+            <Text style={styles.teamButtonText}>Team Members</Text>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity style={styles.logoutButton} onPress={signOut}>
           <Text style={styles.logoutText}>Log out</Text>
         </TouchableOpacity>
@@ -59,6 +66,8 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 12, borderTopWidth: 1, borderTopColor: "#f0f0f0" },
   label: { fontSize: 14, color: "#888" },
   value: { fontSize: 14, fontWeight: "600" },
-  logoutButton: { marginTop: 32, backgroundColor: "#eee", borderRadius: 8, paddingVertical: 14, alignItems: "center" },
+  teamButton: { marginTop: 32, backgroundColor: "#F0FBF9", borderRadius: 8, paddingVertical: 14, alignItems: "center" },
+  teamButtonText: { color: "#128C7E", fontWeight: "600" },
+  logoutButton: { marginTop: 12, backgroundColor: "#eee", borderRadius: 8, paddingVertical: 14, alignItems: "center" },
   logoutText: { color: "#333", fontWeight: "600" },
 });

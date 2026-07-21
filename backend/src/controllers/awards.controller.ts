@@ -2,6 +2,7 @@ import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { ProfileScopedRequest } from "../middleware/activeProfile";
 import { notifyRecipients } from "../lib/notifications";
+import { assertGroupInScope } from "../middleware/requirePermission";
 
 export async function closeBid(req: ProfileScopedRequest, res: Response) {
   const { id: bidId } = req.params;
@@ -15,7 +16,7 @@ export async function closeBid(req: ProfileScopedRequest, res: Response) {
   if (!bid) {
     return res.status(404).json({ error: "Bid not found" });
   }
-  if (bid.createdByProfileId !== req.profile!.id) {
+  if (bid.createdByProfileId !== req.profile!.id || !assertGroupInScope(req, bid.groupId)) {
     return res.status(403).json({ error: "Not your bid" });
   }
 

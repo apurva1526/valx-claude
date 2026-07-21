@@ -15,6 +15,8 @@ import EditBidScreen from "../screens/EditBidScreen";
 import BidChatScreen from "../screens/BidChatScreen";
 import UpdatesScreen from "../screens/UpdatesScreen";
 import ProfileScreen from "../screens/ProfileScreen";
+import TeamMembersScreen from "../screens/TeamMembersScreen";
+import AddTeamMemberScreen from "../screens/AddTeamMemberScreen";
 
 const ChatsStack = createNativeStackNavigator();
 function ChatsStackNavigator() {
@@ -29,6 +31,8 @@ function ChatsStackNavigator() {
       <ChatsStack.Screen name="BidDetail" component={BidDetailScreen} />
       <ChatsStack.Screen name="EditBid" component={EditBidScreen} />
       <ChatsStack.Screen name="BidChat" component={BidChatScreen} />
+      <ChatsStack.Screen name="TeamMembers" component={TeamMembersScreen} />
+      <ChatsStack.Screen name="AddTeamMember" component={AddTeamMemberScreen} />
     </ChatsStack.Navigator>
   );
 }
@@ -39,6 +43,17 @@ function UpdatesStackNavigator() {
     <UpdatesStack.Navigator screenOptions={{ headerShown: false }}>
       <UpdatesStack.Screen name="UpdatesHome" component={UpdatesScreen} />
     </UpdatesStack.Navigator>
+  );
+}
+
+const ProfileStack = createNativeStackNavigator();
+function ProfileStackNavigator() {
+  return (
+    <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
+      <ProfileStack.Screen name="ProfileHome" component={ProfileScreen} />
+      <ProfileStack.Screen name="TeamMembers" component={TeamMembersScreen} />
+      <ProfileStack.Screen name="AddTeamMember" component={AddTeamMemberScreen} />
+    </ProfileStack.Navigator>
   );
 }
 
@@ -70,7 +85,7 @@ export default function MainTabNavigator() {
         listeners={{ focus: refreshUnreadCount }}
       />
       <Tab.Screen name="ChatsTab" component={ChatsStackNavigator} options={{ title: "Chats" }} />
-      <Tab.Screen name="ProfileTab" component={ProfileScreen} options={{ title: "Profile" }} />
+      <Tab.Screen name="ProfileTab" component={ProfileStackNavigator} options={{ title: "Profile" }} />
     </Tab.Navigator>
   );
 }

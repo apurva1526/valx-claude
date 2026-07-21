@@ -7,7 +7,7 @@ export default function OtpVerifyScreen({ route, navigation }: any) {
   const { phoneNumber } = route.params;
   const [otp, setOtp] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { signIn, setActiveProfile } = useAuth();
+  const { signIn, setActiveProfile, setUserName } = useAuth();
 
   const handleVerify = async () => {
     if (otp.trim().length !== 4) {
@@ -19,11 +19,12 @@ export default function OtpVerifyScreen({ route, navigation }: any) {
       const { token } = await verifyOtp(phoneNumber, otp.trim());
       await signIn(token);
 
-      const { profiles } = await getMyProfiles(token);
+      const { profiles, name } = await getMyProfiles(token);
+      setUserName(name);
       if (profiles.length > 0) {
         setActiveProfile(profiles[0]);
       }
-      // No profile yet -> RootNavigator swaps to ProfileSetup automatically once `token` is set.
+      // RootNavigator swaps to the right screen automatically based on profiles/name.
     } catch (err: any) {
       Alert.alert("Verification failed", err.message ?? "Please try again");
     } finally {

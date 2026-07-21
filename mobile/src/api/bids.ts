@@ -3,6 +3,14 @@ import { get, patch, post } from "./client";
 export type BidStatus = "ONGOING" | "CLOSED";
 export type Currency = "INR" | "USD";
 
+export interface AwardRecord {
+  id: string;
+  awardedSupplierIds: string[];
+  averagePrice: number | null;
+  closedByProfileId: string;
+  closedAt: string;
+}
+
 export interface Bid {
   id: string;
   groupId: string;
@@ -15,6 +23,8 @@ export interface Bid {
   createdByProfileId: string;
   createdAt: string;
   createdByProfile?: { companyName: string };
+  awardRecord?: AwardRecord | null;
+  awardOutcome?: { wasAwarded: boolean };
 }
 
 interface Auth {

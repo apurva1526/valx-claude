@@ -36,6 +36,7 @@ model Profile {
   bidsCreated      Bid[]
   bidResponses     BidResponse[]
   notifications    Notification[]
+  awardsClosedBy   AwardRecord[]
 
   @@unique([phoneNumber, companyName, profileType])
 }
@@ -79,11 +80,24 @@ model Bid {
 
   responses     BidResponse[]
   notifications Notification[]
+  awardRecord   AwardRecord?
+}
+
+model AwardRecord {
+  id                 String   @id @default(uuid())
+  bidId              String   @unique
+  bid                Bid      @relation(fields: [bidId], references: [id])
+  awardedSupplierIds String[]
+  averagePrice       Float?
+  closedByProfileId  String
+  closedByProfile    Profile  @relation(fields: [closedByProfileId], references: [id])
+  closedAt           DateTime @default(now())
 }
 
 enum NotificationType {
   BID_EDITED
   BID_CREATED
+  BID_CLOSED
 }
 
 model Notification {

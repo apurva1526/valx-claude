@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { Bid, getBidDetail } from "../api/bids";
 import { BuyerResponseRow, getBuyerResponses, getSupplierResponses, RevisionEntry, YourResponse } from "../api/bidResponses";
 import MakeBidModal from "../components/MakeBidModal";
+import CloseBidModal from "../components/CloseBidModal";
 
 export default function BidDetailScreen({ route, navigation }: any) {
   const { bidId } = route.params;
@@ -16,6 +17,7 @@ export default function BidDetailScreen({ route, navigation }: any) {
   const [yourHistory, setYourHistory] = useState<RevisionEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
+  const [closeModalVisible, setCloseModalVisible] = useState(false);
 
   const isBuyer = activeProfile?.profileType === "BUYER";
   const auth = { token: token!, profileId: activeProfile!.id };
@@ -143,6 +145,27 @@ export default function BidDetailScreen({ route, navigation }: any) {
                 </View>
               ))
             )}
+
+            {bid.status === "CLOSED" ? (
+              <View style={styles.awardSummary}>
+                <Text style={styles.awardSummaryTitle}>
+                  {bid.awardRecord && bid.awardRecord.awardedSupplierIds.length > 0
+                    ? `Awarded — Avg ${currencySymbol}${bid.awardRecord.averagePrice}`
+                    : "Closed, No Award"}
+                </Text>
+                {bid.awardRecord && bid.awardRecord.awardedSupplierIds.length > 0 && (
+                  <Text style={styles.awardSummaryNames}>
+                    {bid.awardRecord.awardedSupplierIds
+                      .map((id) => buyerResponses.find((r) => r.supplierProfileId === id)?.companyName ?? "Unknown")
+                      .join(", ")}
+                  </Text>
+                )}
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.closeBidButton} onPress={() => setCloseModalVisible(true)}>
+                <Text style={styles.closeBidButtonText}>Close Bid</Text>
+              </TouchableOpacity>
+            )}
           </>
         ) : (
           <>
@@ -179,7 +202,13 @@ export default function BidDetailScreen({ route, navigation }: any) {
               </View>
             )}
 
-            {isExpired ? (
+            {bid.status === "CLOSED" ? (
+              <View style={styles.awardSummary}>
+                <Text style={styles.awardSummaryTitle}>
+                  {bid.awardOutcome?.wasAwarded ? "🎉 You were awarded this bid!" : "This bid has closed"}
+                </Text>
+              </View>
+            ) : isExpired ? (
               <Text style={styles.expiredNotice}>This bid's validity has expired — no further bids can be placed.</Text>
             ) : (
               <TouchableOpacity style={styles.bidButton} onPress={() => setModalVisible(true)}>
@@ -199,6 +228,17 @@ export default function BidDetailScreen({ route, navigation }: any) {
           currencySymbol={currencySymbol}
           yourResponse={yourResponse}
           onSubmitted={load}
+        />
+      )}
+
+      {isBuyer && (
+        <CloseBidModal
+          visible={closeModalVisible}
+          onClose={() => setCloseModalVisible(false)}
+          bidId={bidId}
+          currencySymbol={currencySymbol}
+          responses={buyerResponses}
+          onClosed={load}
         />
       )}
     </View>
@@ -262,4 +302,9 @@ const styles = StyleSheet.create({
   bidButton: { backgroundColor: "#128C7E", borderRadius: 8, padding: 14, alignItems: "center", marginTop: 12 },
   bidButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
   expiredNotice: { color: "#999", fontSize: 13, textAlign: "center", marginTop: 12, fontStyle: "italic" },
+  closeBidButton: { backgroundColor: "#B00020", borderRadius: 8, padding: 14, alignItems: "center", marginTop: 16 },
+  closeBidButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  awardSummary: { backgroundColor: "#F0FBF9", borderRadius: 10, padding: 16, marginTop: 16, alignItems: "center" },
+  awardSummaryTitle: { fontSize: 15, fontWeight: "700", color: "#128C7E" },
+  awardSummaryNames: { fontSize: 13, color: "#555", marginTop: 4, textAlign: "center" },
 });

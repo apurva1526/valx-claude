@@ -166,7 +166,10 @@ export async function getBidDetail(req: ProfileScopedRequest, res: Response) {
 
   const bid = await prisma.bid.findUnique({
     where: { id: bidId },
-    include: { createdByProfile: { select: { companyName: true } } },
+    include: {
+      createdByProfile: { select: { companyName: true } },
+      awardRecord: true,
+    },
   });
   if (!bid) {
     return res.status(404).json({ error: "Bid not found" });
@@ -177,5 +180,15 @@ export async function getBidDetail(req: ProfileScopedRequest, res: Response) {
     return res.status(403).json({ error: "You are not a member of this bid's group" });
   }
 
-  res.status(200).json({ bid });
+  if (req.profile!.profileType === "BUYER" || !bid.awardRecord) {
+    return res.status(200).json({ bid });
+  }
+
+  const { awardRecord, ...bidWithoutAward } = bid;
+  res.status(200).json({
+    bid: {
+      ...bidWithoutAward,
+      awardOutcome: { wasAwarded: awardRecord.awardedSupplierIds.includes(req.profile!.id) },
+    },
+  });
 }

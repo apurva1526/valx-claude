@@ -25,3 +25,21 @@ export async function notifyGroupSuppliers(
     })),
   });
 }
+
+export async function notifyRecipients(
+  tx: PrismaTx,
+  type: NotificationType,
+  bidId: string,
+  recipients: { recipientProfileId: string; message: string }[]
+): Promise<void> {
+  if (recipients.length === 0) return;
+
+  await tx.notification.createMany({
+    data: recipients.map((r) => ({
+      recipientProfileId: r.recipientProfileId,
+      type,
+      message: r.message,
+      bidId,
+    })),
+  });
+}

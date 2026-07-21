@@ -11,6 +11,7 @@ export default function GroupDetailScreen({ route, navigation }: any) {
   const [groupName, setGroupName] = useState<string>("");
   const [bids, setBids] = useState<Bid[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [filter, setFilter] = useState<"ONGOING" | "PAST">("ONGOING");
 
   const isBuyer = activeProfile?.profileType === "BUYER";
   const auth = { token: token!, profileId: activeProfile!.id };
@@ -36,6 +37,8 @@ export default function GroupDetailScreen({ route, navigation }: any) {
     );
   }
 
+  const filteredBids = bids.filter((b) => (filter === "ONGOING" ? b.status === "ONGOING" : b.status === "CLOSED"));
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -54,13 +57,32 @@ export default function GroupDetailScreen({ route, navigation }: any) {
         )}
       </View>
 
+      <View style={styles.filterRow}>
+        <TouchableOpacity
+          style={[styles.filterOption, filter === "ONGOING" && styles.filterOptionActive]}
+          onPress={() => setFilter("ONGOING")}
+        >
+          <Text style={[styles.filterText, filter === "ONGOING" && styles.filterTextActive]}>Ongoing</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.filterOption, filter === "PAST" && styles.filterOptionActive]}
+          onPress={() => setFilter("PAST")}
+        >
+          <Text style={[styles.filterText, filter === "PAST" && styles.filterTextActive]}>Past</Text>
+        </TouchableOpacity>
+      </View>
+
       <FlatList
-        contentContainerStyle={bids.length === 0 ? styles.emptyContainer : styles.list}
-        data={bids}
+        contentContainerStyle={filteredBids.length === 0 ? styles.emptyContainer : styles.list}
+        data={filteredBids}
         keyExtractor={(item) => item.id}
         ListEmptyComponent={
           <Text style={styles.emptyText}>
-            {isBuyer ? "No bids yet. Tap + to raise one." : "No bids have been raised in this group yet."}
+            {filter === "ONGOING"
+              ? isBuyer
+                ? "No bids yet. Tap + to raise one."
+                : "No bids have been raised in this group yet."
+              : "No past bids yet."}
           </Text>
         }
         renderItem={({ item }) => {
@@ -115,6 +137,11 @@ const styles = StyleSheet.create({
   back: { color: "#128C7E", fontWeight: "600" },
   headerTitle: { fontSize: 17, fontWeight: "700", flex: 1, textAlign: "center", marginHorizontal: 8 },
   suppliersLink: { color: "#128C7E", fontWeight: "600" },
+  filterRow: { flexDirection: "row", paddingHorizontal: 16, paddingTop: 12, gap: 10 },
+  filterOption: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 16, backgroundColor: "#f0f0f0" },
+  filterOptionActive: { backgroundColor: "#128C7E" },
+  filterText: { fontSize: 13, fontWeight: "600", color: "#555" },
+  filterTextActive: { color: "#fff" },
   list: { padding: 16 },
   emptyContainer: { flexGrow: 1, justifyContent: "center", alignItems: "center" },
   emptyText: { color: "#888", textAlign: "center", paddingHorizontal: 32 },

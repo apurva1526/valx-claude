@@ -6,7 +6,7 @@ import { getMyGroups, GroupListItem } from "../api/groups";
 import Avatar from "../components/Avatar";
 
 export default function GroupListScreen({ navigation }: any) {
-  const { token, activeProfile, signOut } = useAuth();
+  const { token, activeProfile } = useAuth();
   const [groups, setGroups] = useState<GroupListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -30,9 +30,6 @@ export default function GroupListScreen({ navigation }: any) {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{activeProfile?.companyName}</Text>
-        <TouchableOpacity onPress={signOut}>
-          <Text style={styles.logout}>Log out</Text>
-        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -86,7 +83,6 @@ const styles = StyleSheet.create({
     borderBottomColor: "#eee",
   },
   headerTitle: { fontSize: 18, fontWeight: "700" },
-  logout: { color: "#128C7E", fontWeight: "600" },
   row: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
   rowText: { flex: 1 },
   rowTitleLine: { flexDirection: "row", alignItems: "center", gap: 6 },

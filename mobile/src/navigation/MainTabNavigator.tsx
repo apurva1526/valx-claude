@@ -1,0 +1,76 @@
+import React, { useCallback, useEffect, useState } from "react";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { useAuth } from "../context/AuthContext";
+import { getNotifications } from "../api/notifications";
+
+import GroupListScreen from "../screens/GroupListScreen";
+import CreateGroupScreen from "../screens/CreateGroupScreen";
+import GroupDetailScreen from "../screens/GroupDetailScreen";
+import GroupSuppliersScreen from "../screens/GroupSuppliersScreen";
+import AddSuppliersScreen from "../screens/AddSuppliersScreen";
+import CreateBidScreen from "../screens/CreateBidScreen";
+import BidDetailScreen from "../screens/BidDetailScreen";
+import EditBidScreen from "../screens/EditBidScreen";
+import BidChatScreen from "../screens/BidChatScreen";
+import UpdatesScreen from "../screens/UpdatesScreen";
+import ProfileScreen from "../screens/ProfileScreen";
+
+const ChatsStack = createNativeStackNavigator();
+function ChatsStackNavigator() {
+  return (
+    <ChatsStack.Navigator screenOptions={{ headerShown: false }}>
+      <ChatsStack.Screen name="GroupList" component={GroupListScreen} />
+      <ChatsStack.Screen name="CreateGroup" component={CreateGroupScreen} />
+      <ChatsStack.Screen name="GroupDetail" component={GroupDetailScreen} />
+      <ChatsStack.Screen name="GroupSuppliers" component={GroupSuppliersScreen} />
+      <ChatsStack.Screen name="AddSuppliers" component={AddSuppliersScreen} />
+      <ChatsStack.Screen name="CreateBid" component={CreateBidScreen} />
+      <ChatsStack.Screen name="BidDetail" component={BidDetailScreen} />
+      <ChatsStack.Screen name="EditBid" component={EditBidScreen} />
+      <ChatsStack.Screen name="BidChat" component={BidChatScreen} />
+    </ChatsStack.Navigator>
+  );
+}
+
+const UpdatesStack = createNativeStackNavigator();
+function UpdatesStackNavigator() {
+  return (
+    <UpdatesStack.Navigator screenOptions={{ headerShown: false }}>
+      <UpdatesStack.Screen name="UpdatesHome" component={UpdatesScreen} />
+    </UpdatesStack.Navigator>
+  );
+}
+
+const Tab = createBottomTabNavigator();
+
+export default function MainTabNavigator() {
+  const { token, activeProfile } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const refreshUnreadCount = useCallback(() => {
+    if (!token || !activeProfile) return;
+    getNotifications({ token, profileId: activeProfile.id })
+      .then(({ notifications }) => setUnreadCount(notifications.filter((n) => !n.readAt).length))
+      .catch(() => {});
+  }, [token, activeProfile]);
+
+  useEffect(() => {
+    refreshUnreadCount();
+    const interval = setInterval(refreshUnreadCount, 60000);
+    return () => clearInterval(interval);
+  }, [refreshUnreadCount]);
+
+  return (
+    <Tab.Navigator screenOptions={{ headerShown: false, tabBarActiveTintColor: "#128C7E" }}>
+      <Tab.Screen
+        name="UpdatesTab"
+        component={UpdatesStackNavigator}
+        options={{ title: "Updates", tabBarBadge: unreadCount > 0 ? unreadCount : undefined }}
+        listeners={{ focus: refreshUnreadCount }}
+      />
+      <Tab.Screen name="ChatsTab" component={ChatsStackNavigator} options={{ title: "Chats" }} />
+      <Tab.Screen name="ProfileTab" component={ProfileScreen} options={{ title: "Profile" }} />
+    </Tab.Navigator>
+  );
+}

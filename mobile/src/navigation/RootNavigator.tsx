@@ -7,15 +7,7 @@ import { getMyProfiles } from "../api/auth";
 import PhoneEntryScreen from "../screens/PhoneEntryScreen";
 import OtpVerifyScreen from "../screens/OtpVerifyScreen";
 import ProfileSetupScreen from "../screens/ProfileSetupScreen";
-import GroupListScreen from "../screens/GroupListScreen";
-import CreateGroupScreen from "../screens/CreateGroupScreen";
-import GroupDetailScreen from "../screens/GroupDetailScreen";
-import GroupSuppliersScreen from "../screens/GroupSuppliersScreen";
-import AddSuppliersScreen from "../screens/AddSuppliersScreen";
-import CreateBidScreen from "../screens/CreateBidScreen";
-import BidDetailScreen from "../screens/BidDetailScreen";
-import EditBidScreen from "../screens/EditBidScreen";
-import BidChatScreen from "../screens/BidChatScreen";
+import MainTabNavigator from "./MainTabNavigator";
 
 const Stack = createNativeStackNavigator();
 
@@ -64,28 +56,18 @@ export default function RootNavigator() {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {!token ? (
-          <>
-            <Stack.Screen name="PhoneEntry" component={PhoneEntryScreen} />
-            <Stack.Screen name="OtpVerify" component={OtpVerifyScreen} />
-          </>
-        ) : !activeProfile ? (
+      {!token ? (
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="PhoneEntry" component={PhoneEntryScreen} />
+          <Stack.Screen name="OtpVerify" component={OtpVerifyScreen} />
+        </Stack.Navigator>
+      ) : !activeProfile ? (
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
-        ) : (
-          <>
-            <Stack.Screen name="GroupList" component={GroupListScreen} />
-            <Stack.Screen name="CreateGroup" component={CreateGroupScreen} />
-            <Stack.Screen name="GroupDetail" component={GroupDetailScreen} />
-            <Stack.Screen name="GroupSuppliers" component={GroupSuppliersScreen} />
-            <Stack.Screen name="AddSuppliers" component={AddSuppliersScreen} />
-            <Stack.Screen name="CreateBid" component={CreateBidScreen} />
-            <Stack.Screen name="BidDetail" component={BidDetailScreen} />
-            <Stack.Screen name="EditBid" component={EditBidScreen} />
-            <Stack.Screen name="BidChat" component={BidChatScreen} />
-          </>
-        )}
-      </Stack.Navigator>
+        </Stack.Navigator>
+      ) : (
+        <MainTabNavigator />
+      )}
     </NavigationContainer>
   );
 }

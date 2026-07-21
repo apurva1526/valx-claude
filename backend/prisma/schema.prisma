@@ -77,6 +77,7 @@ model Bid {
   createdByProfileId  String
   createdByProfile    Profile   @relation(fields: [createdByProfileId], references: [id])
   createdAt           DateTime  @default(now())
+  deadlineAlertSentAt DateTime?
 
   responses     BidResponse[]
   notifications Notification[]
@@ -98,6 +99,7 @@ enum NotificationType {
   BID_EDITED
   BID_CREATED
   BID_CLOSED
+  BID_DEADLINE_APPROACHING
 }
 
 model Notification {

@@ -7,6 +7,7 @@ export interface Profile {
   companyName: string;
   profileType: ProfileType;
   gstNumber: string | null;
+  phoneNumber: string;
 }
 
 export function requestOtp(phoneNumber: string): Promise<{ ok: true }> {

@@ -34,6 +34,7 @@ model Profile {
   groupsOwned      Group[]         @relation("BuyerGroups")
   groupMemberships GroupSupplier[]
   bidsCreated      Bid[]
+  bidResponses     BidResponse[]
 
   @@unique([phoneNumber, companyName, profileType])
 }
@@ -74,6 +75,35 @@ model Bid {
   createdByProfileId  String
   createdByProfile    Profile   @relation(fields: [createdByProfileId], references: [id])
   createdAt           DateTime  @default(now())
+
+  responses BidResponse[]
+}
+
+model BidResponse {
+  id                String   @id @default(uuid())
+  bidId             String
+  bid               Bid      @relation(fields: [bidId], references: [id])
+  supplierProfileId String
+  supplierProfile   Profile  @relation(fields: [supplierProfileId], references: [id])
+  price             Float
+  comment           String?
+  revisionNumber    Int      @default(1)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  revisions BidResponseRevision[]
+
+  @@unique([bidId, supplierProfileId])
+}
+
+model BidResponseRevision {
+  id             String      @id @default(uuid())
+  bidResponseId  String
+  bidResponse    BidResponse @relation(fields: [bidResponseId], references: [id])
+  price          Float
+  comment        String?
+  revisionNumber Int
+  createdAt      DateTime    @default(now())
 }
 
 model GroupSupplier {

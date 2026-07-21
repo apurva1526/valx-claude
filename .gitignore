@@ -16,6 +16,9 @@ build/
 # Prisma
 backend/prisma/migrations/dev.db
 
+# Firebase credentials
+backend/firebase-service-account.json
+
 # macOS
 .DS_Store
 

@@ -12,3 +12,4 @@ function resolveApiBaseUrl(): string {
 }
 
 export const API_BASE_URL = resolveApiBaseUrl();
+export const WS_BASE_URL = API_BASE_URL.replace(/^http/, "ws");

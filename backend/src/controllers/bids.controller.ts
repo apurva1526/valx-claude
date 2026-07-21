@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma";
 import { ProfileScopedRequest } from "../middleware/activeProfile";
 import { getGroupForProfile } from "../lib/groupAccess";
 import { notifyGroupSuppliers } from "../lib/notifications";
+import { getChatFirestore } from "../lib/firebase";
 
 interface ValidatedBidFields {
   title: string;
@@ -85,6 +86,22 @@ export async function createBid(req: ProfileScopedRequest, res: Response) {
 
     return created;
   });
+
+  try {
+    const priceLine = bid.targetPrice != null ? `\nTarget price: ${bid.targetPriceCurrency} ${bid.targetPrice}` : "";
+    await getChatFirestore()
+      .collection("bidChats")
+      .doc(bid.id)
+      .collection("messages")
+      .add({
+        senderProfileId: null,
+        text: `${bid.title}\n${bid.description}${priceLine}\nValid till: ${bid.validityDeadline.toISOString()}`,
+        type: "system",
+        createdAt: new Date(),
+      });
+  } catch (err) {
+    console.warn("Skipped chat bid-card seed (Firebase not configured yet):", (err as Error).message);
+  }
 
   res.status(201).json({ bid });
 }

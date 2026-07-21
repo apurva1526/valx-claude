@@ -62,13 +62,16 @@ export default function BidDetailScreen({ route, navigation }: any) {
           <Text style={styles.back}>{"‹ Back"}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Bid Details</Text>
-        {isBuyer ? (
-          <TouchableOpacity onPress={() => navigation.navigate("EditBid", { bid })}>
-            <Text style={styles.editLink}>Edit</Text>
+        <View style={styles.headerActions}>
+          <TouchableOpacity onPress={() => navigation.navigate("BidChat", { bidId })}>
+            <Text style={styles.editLink}>Chat</Text>
           </TouchableOpacity>
-        ) : (
-          <View style={{ width: 50 }} />
-        )}
+          {isBuyer && (
+            <TouchableOpacity onPress={() => navigation.navigate("EditBid", { bid })}>
+              <Text style={styles.editLink}>Edit</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
@@ -260,7 +263,8 @@ const styles = StyleSheet.create({
   },
   back: { color: "#128C7E", fontWeight: "600", width: 50 },
   headerTitle: { fontSize: 17, fontWeight: "700" },
-  editLink: { color: "#128C7E", fontWeight: "600", width: 50, textAlign: "right" },
+  headerActions: { flexDirection: "row", gap: 14 },
+  editLink: { color: "#128C7E", fontWeight: "600" },
   body: { flex: 1 },
   bodyContent: { padding: 20, paddingBottom: 40 },
   statusRow: { flexDirection: "row", alignItems: "center", marginBottom: 12 },

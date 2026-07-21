@@ -15,6 +15,7 @@ import AddSuppliersScreen from "../screens/AddSuppliersScreen";
 import CreateBidScreen from "../screens/CreateBidScreen";
 import BidDetailScreen from "../screens/BidDetailScreen";
 import EditBidScreen from "../screens/EditBidScreen";
+import BidChatScreen from "../screens/BidChatScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -81,6 +82,7 @@ export default function RootNavigator() {
             <Stack.Screen name="CreateBid" component={CreateBidScreen} />
             <Stack.Screen name="BidDetail" component={BidDetailScreen} />
             <Stack.Screen name="EditBid" component={EditBidScreen} />
+            <Stack.Screen name="BidChat" component={BidChatScreen} />
           </>
         )}
       </Stack.Navigator>

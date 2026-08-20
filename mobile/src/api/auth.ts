@@ -1,4 +1,4 @@
-import { get, patch, post } from "./client";
+import { del, get, patch, post } from "./client";
 
 export type ProfileType = "BUYER" | "SUPPLIER";
 export type AccessLevel = "OWNER" | "VIEW" | "EDIT" | "MANAGE";
@@ -21,7 +21,22 @@ export function verifyOtp(phoneNumber: string, otp: string): Promise<{ token: st
   return post("/auth/otp/verify", { phoneNumber, otp });
 }
 
-export function getMyProfiles(token: string): Promise<{ profiles: Profile[]; name: string | null }> {
+export interface DeactivatedProfile {
+  id: string;
+  companyName: string;
+  profileType: ProfileType;
+  phoneNumber: string;
+  deactivatedAt: string;
+}
+
+export function getMyProfiles(
+  token: string
+): Promise<{
+  profiles: Profile[];
+  deactivatedProfiles: DeactivatedProfile[];
+  name: string | null;
+  phoneNumber: string | null;
+}> {
   return get("/profiles/me", { token });
 }
 
@@ -38,4 +53,32 @@ export function switchProfile(token: string, profileId: string): Promise<{ profi
 
 export function setMyName(token: string, name: string): Promise<{ name: string }> {
   return patch("/auth/name", { name }, { token });
+}
+
+export function deleteMyAccount(token: string): Promise<void> {
+  return del("/auth/me", { token });
+}
+
+interface Auth {
+  token: string;
+  profileId: string;
+}
+
+export function updateProfile(
+  auth: Auth,
+  profileId: string,
+  data: { companyName?: string; gstNumber?: string }
+): Promise<{ profile: Profile }> {
+  return patch(`/profiles/${profileId}`, data, auth);
+}
+
+export function deactivateProfile(
+  auth: Auth,
+  profileId: string
+): Promise<{ profile: Profile; bidsClosed: number; responsesWithdrawn: number }> {
+  return del(`/profiles/${profileId}`, auth);
+}
+
+export function reactivateProfile(token: string, profileId: string): Promise<{ profile: Profile }> {
+  return post(`/profiles/${profileId}/reactivate`, {}, { token });
 }

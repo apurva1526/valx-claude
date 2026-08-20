@@ -1,9 +1,17 @@
 import React, { useCallback, useState } from "react";
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../context/AuthContext";
 import { Bid, getBidDetail } from "../api/bids";
-import { BuyerResponseRow, getBuyerResponses, getSupplierResponses, RevisionEntry, YourResponse } from "../api/bidResponses";
+import {
+  BuyerResponseRow,
+  getBuyerResponses,
+  getSupplierResponses,
+  revokeResponse,
+  RevisionEntry,
+  YourResponse,
+} from "../api/bidResponses";
 import MakeBidModal from "../components/MakeBidModal";
 import CloseBidModal from "../components/CloseBidModal";
 
@@ -18,6 +26,7 @@ export default function BidDetailScreen({ route, navigation }: any) {
   const [isLoading, setIsLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [closeModalVisible, setCloseModalVisible] = useState(false);
+  const [isRevoking, setIsRevoking] = useState(false);
 
   const isBuyer = activeProfile?.profileType === "BUYER";
   const canEdit = activeProfile?.access === "OWNER" || activeProfile?.access === "MANAGE" || activeProfile?.access === "EDIT";
@@ -44,6 +53,27 @@ export default function BidDetailScreen({ route, navigation }: any) {
 
   useFocusEffect(load);
 
+  const handleRevoke = () => {
+    Alert.alert("Revoke your bid?", "This uses one of your 5 revisions. You can still submit a new, lower price afterwards.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Revoke",
+        style: "destructive",
+        onPress: async () => {
+          setIsRevoking(true);
+          try {
+            await revokeResponse(auth, bidId);
+            load();
+          } catch (err: any) {
+            Alert.alert("Couldn't revoke bid", err.message ?? "Please try again");
+          } finally {
+            setIsRevoking(false);
+          }
+        },
+      },
+    ]);
+  };
+
   if (isLoading || !bid) {
     return (
       <View style={styles.centered}>
@@ -64,8 +94,9 @@ export default function BidDetailScreen({ route, navigation }: any) {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Bid Details</Text>
         <View style={styles.headerActions}>
-          <TouchableOpacity onPress={() => navigation.navigate("BidChat", { bidId })}>
+          <TouchableOpacity style={styles.chatLink} onPress={() => navigation.navigate("BidChat", { bidId })}>
             <Text style={styles.editLink}>Chat</Text>
+            {bid.hasUnreadChat && <View style={styles.chatUnreadDot} />}
           </TouchableOpacity>
           {isBuyer && (
             <TouchableOpacity onPress={() => navigation.navigate("EditBid", { bid })}>
@@ -114,22 +145,27 @@ export default function BidDetailScreen({ route, navigation }: any) {
             {buyerResponses.length === 0 ? (
               <Text style={styles.emptyText}>No responses yet.</Text>
             ) : (
-              buyerResponses.map((r, index) => (
-                <View key={r.supplierProfileId} style={styles.responseCard}>
-                  <View style={styles.responseHeader}>
-                    <Text style={styles.responseName}>
-                      <Text style={styles.responseRank}>#{index + 1} </Text>
-                      {r.companyName}
-                    </Text>
-                    <Text style={styles.responsePrice}>
-                      {currencySymbol}
-                      {r.price}
-                    </Text>
-                  </View>
-                  {r.comment && <Text style={styles.responseComment}>{r.comment}</Text>}
-                  <Text style={styles.responseMeta}>
-                    Revision {r.revisionNumber} of 5 · {new Date(r.updatedAt).toLocaleString()}
-                  </Text>
+              (() => {
+                let rank = 0;
+                return buyerResponses.map((r) => {
+                  if (!r.revokedAt) rank += 1;
+                  return (
+                    <View key={r.supplierProfileId} style={[styles.responseCard, r.revokedAt && styles.responseCardRevoked]}>
+                      <View style={styles.responseHeader}>
+                        <Text style={styles.responseName}>
+                          {r.revokedAt ? (
+                            <Text style={styles.revokedBadge}>Revoked </Text>
+                          ) : (
+                            <Text style={styles.responseRank}>#{rank} </Text>
+                          )}
+                          {r.companyName}
+                        </Text>
+                        <Text style={styles.responsePrice}>{r.revokedAt ? "—" : `${currencySymbol}${r.price}`}</Text>
+                      </View>
+                      {r.comment && <Text style={styles.responseComment}>{r.comment}</Text>}
+                      <Text style={styles.responseMeta}>
+                        Revision {r.revisionNumber} of 5 · {new Date(r.updatedAt).toLocaleString()}
+                      </Text>
 
                   {r.history.length > 1 && (
                     <View style={styles.historyBlock}>
@@ -138,24 +174,23 @@ export default function BidDetailScreen({ route, navigation }: any) {
                         <View key={h.revisionNumber} style={styles.historyRow}>
                           <Text style={styles.historyLabel}>Rev {h.revisionNumber}</Text>
                           <Text style={styles.historyPrice}>
-                            {currencySymbol}
-                            {h.price}
+                            {h.revokedAt ? "Revoked" : `${currencySymbol}${h.price}`}
                           </Text>
                           <Text style={styles.historyDate}>{new Date(h.createdAt).toLocaleString()}</Text>
                         </View>
                       ))}
                     </View>
                   )}
-                </View>
-              ))
+                    </View>
+                  );
+                });
+              })()
             )}
 
             {bid.status === "CLOSED" ? (
               <View style={styles.awardSummary}>
                 <Text style={styles.awardSummaryTitle}>
-                  {bid.awardRecord && bid.awardRecord.awardedSupplierIds.length > 0
-                    ? `Awarded — Avg ${currencySymbol}${bid.awardRecord.averagePrice}`
-                    : "Closed, No Award"}
+                  {bid.awardRecord && bid.awardRecord.awardedSupplierIds.length > 0 ? "Awarded" : "Closed, No Award"}
                 </Text>
                 {bid.awardRecord && bid.awardRecord.awardedSupplierIds.length > 0 && (
                   <Text style={styles.awardSummaryNames}>
@@ -192,6 +227,10 @@ export default function BidDetailScreen({ route, navigation }: any) {
               </View>
             </View>
 
+            {yourResponse?.revokedAt && (
+              <Text style={styles.revokedNotice}>You revoked this bid. Submit a new, lower price to re-enter.</Text>
+            )}
+
             {yourHistory.length > 1 && (
               <View style={styles.historyBlock}>
                 <Text style={styles.historyTitle}>Your revision history</Text>
@@ -199,8 +238,7 @@ export default function BidDetailScreen({ route, navigation }: any) {
                   <View key={h.revisionNumber} style={styles.historyRow}>
                     <Text style={styles.historyLabel}>Rev {h.revisionNumber}</Text>
                     <Text style={styles.historyPrice}>
-                      {currencySymbol}
-                      {h.price}
+                      {h.revokedAt ? "Revoked" : `${currencySymbol}${h.price}`}
                     </Text>
                     <Text style={styles.historyDate}>{new Date(h.createdAt).toLocaleString()}</Text>
                   </View>
@@ -210,16 +248,29 @@ export default function BidDetailScreen({ route, navigation }: any) {
 
             {bid.status === "CLOSED" ? (
               <View style={styles.awardSummary}>
-                <Text style={styles.awardSummaryTitle}>
-                  {bid.awardOutcome?.wasAwarded ? "🎉 You were awarded this bid!" : "This bid has closed"}
-                </Text>
+                {bid.awardOutcome?.wasAwarded ? (
+                  <View style={styles.awardSummaryRow}>
+                    <Ionicons name="checkmark-circle" size={18} color="#128C7E" />
+                    <Text style={styles.awardSummaryTitle}>You were awarded this bid!</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.awardSummaryTitle}>This bid has closed</Text>
+                )}
+                {bid.awardOutcome?.comment && <Text style={styles.awardComment}>{bid.awardOutcome.comment}</Text>}
               </View>
             ) : isExpired ? (
               <Text style={styles.expiredNotice}>This bid's validity has expired — no further bids can be placed.</Text>
             ) : (
-              <TouchableOpacity style={styles.bidButton} onPress={() => setModalVisible(true)}>
-                <Text style={styles.bidButtonText}>{yourResponse ? "Revise Bid" : "Make Bid"}</Text>
-              </TouchableOpacity>
+              <>
+                <TouchableOpacity style={styles.bidButton} onPress={() => setModalVisible(true)}>
+                  <Text style={styles.bidButtonText}>{yourResponse ? "Revise Bid" : "Make Bid"}</Text>
+                </TouchableOpacity>
+                {yourResponse && !yourResponse.revokedAt && yourResponse.revisionNumber < 5 && (
+                  <TouchableOpacity style={styles.revokeButton} onPress={handleRevoke} disabled={isRevoking}>
+                    {isRevoking ? <ActivityIndicator /> : <Text style={styles.revokeButtonText}>Revoke Bid</Text>}
+                  </TouchableOpacity>
+                )}
+              </>
             )}
           </>
         )}
@@ -243,7 +294,7 @@ export default function BidDetailScreen({ route, navigation }: any) {
           onClose={() => setCloseModalVisible(false)}
           bidId={bidId}
           currencySymbol={currencySymbol}
-          responses={buyerResponses}
+          responses={buyerResponses.filter((r) => !r.revokedAt)}
           onClosed={load}
         />
       )}
@@ -268,6 +319,8 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 17, fontWeight: "700" },
   headerActions: { flexDirection: "row", gap: 14 },
   editLink: { color: "#128C7E", fontWeight: "600" },
+  chatLink: { flexDirection: "row", alignItems: "flex-start" },
+  chatUnreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#FF3B30", marginLeft: 4 },
   body: { flex: 1 },
   bodyContent: { padding: 20, paddingBottom: 40 },
   statusRow: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
@@ -284,9 +337,11 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 16, fontWeight: "700", marginBottom: 12 },
   emptyText: { color: "#888" },
   responseCard: { borderWidth: 1, borderColor: "#eee", borderRadius: 10, padding: 14, marginBottom: 10 },
+  responseCardRevoked: { backgroundColor: "#f7f7f7", opacity: 0.7 },
   responseHeader: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
   responseName: { fontSize: 15, fontWeight: "700" },
   responseRank: { color: "#128C7E" },
+  revokedBadge: { color: "#B00020", fontWeight: "700" },
   responsePrice: { fontSize: 15, fontWeight: "700", color: "#128C7E" },
   responseComment: { fontSize: 13, color: "#555", marginBottom: 6, fontStyle: "italic" },
   responseMeta: { fontSize: 11, color: "#999" },
@@ -308,10 +363,15 @@ const styles = StyleSheet.create({
   rankSummaryValue: { fontSize: 18, fontWeight: "700", color: "#128C7E" },
   bidButton: { backgroundColor: "#128C7E", borderRadius: 8, padding: 14, alignItems: "center", marginTop: 12 },
   bidButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  revokeButton: { borderRadius: 8, padding: 14, alignItems: "center", marginTop: 10, borderWidth: 1, borderColor: "#B00020" },
+  revokeButtonText: { color: "#B00020", fontSize: 14, fontWeight: "600" },
+  revokedNotice: { color: "#B00020", fontSize: 13, marginBottom: 12, fontStyle: "italic" },
   expiredNotice: { color: "#999", fontSize: 13, textAlign: "center", marginTop: 12, fontStyle: "italic" },
   closeBidButton: { backgroundColor: "#B00020", borderRadius: 8, padding: 14, alignItems: "center", marginTop: 16 },
   closeBidButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
   awardSummary: { backgroundColor: "#F0FBF9", borderRadius: 10, padding: 16, marginTop: 16, alignItems: "center" },
+  awardSummaryRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   awardSummaryTitle: { fontSize: 15, fontWeight: "700", color: "#128C7E" },
   awardSummaryNames: { fontSize: 13, color: "#555", marginTop: 4, textAlign: "center" },
+  awardComment: { fontSize: 13, color: "#555", marginTop: 6, textAlign: "center", fontStyle: "italic" },
 });

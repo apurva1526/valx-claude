@@ -6,7 +6,7 @@ import { EffectiveAccessLevel, resolveProfileAccess } from "../lib/profileAccess
 export type { EffectiveAccessLevel };
 
 export interface ProfileScopedRequest extends AuthedRequest {
-  profile?: { id: string; profileType: ProfileType; companyName: string };
+  profile?: { id: string; profileType: ProfileType; companyName: string; phoneNumber: string };
   access?: { level: EffectiveAccessLevel; scopeGroupId: string | null };
 }
 
@@ -26,6 +26,7 @@ export async function requireActiveProfile(req: ProfileScopedRequest, res: Respo
     id: resolved.profile.id,
     profileType: resolved.profile.profileType,
     companyName: resolved.profile.companyName,
+    phoneNumber: resolved.profile.phoneNumber,
   };
   req.access = { level: resolved.level, scopeGroupId: resolved.scopeGroupId };
   next();

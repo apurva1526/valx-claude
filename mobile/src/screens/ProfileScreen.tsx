@@ -1,11 +1,79 @@
-import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useState } from "react";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useAuth } from "../context/AuthContext";
+import { deactivateProfile, deleteMyAccount, getMyProfiles } from "../api/auth";
 import Avatar from "../components/Avatar";
 
 export default function ProfileScreen({ navigation }: any) {
-  const { activeProfile, signOut } = useAuth();
-  const canManageTeam = activeProfile?.access === "OWNER" || activeProfile?.access === "MANAGE";
+  const { token, activeProfile, setActiveProfile, signOut, userName, userPhoneNumber } = useAuth();
+  const isOwner = activeProfile?.access === "OWNER";
+  const canManageTeam = isOwner || activeProfile?.access === "MANAGE";
+  const [isDeactivating, setIsDeactivating] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
+  const handleDeactivate = () => {
+    const isBuyer = activeProfile?.profileType === "BUYER";
+    const consequence = isBuyer
+      ? "Any ongoing bids you've posted will be automatically closed."
+      : "Your active bids will be withdrawn and you'll be removed from groups (reactivating later restores them).";
+
+    Alert.alert("Deactivate this profile?", `"${activeProfile?.companyName}" will no longer be usable. ${consequence}`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Deactivate",
+        style: "destructive",
+        onPress: async () => {
+          setIsDeactivating(true);
+          try {
+            const { bidsClosed, responsesWithdrawn } = await deactivateProfile(
+              { token: token!, profileId: activeProfile!.id },
+              activeProfile!.id
+            );
+            const { profiles } = await getMyProfiles(token!);
+            if (profiles.length > 0) {
+              setActiveProfile(profiles[0]);
+            } else {
+              await signOut();
+            }
+            if (bidsClosed > 0) {
+              Alert.alert("Profile deactivated", `${bidsClosed} ongoing bid(s) were closed.`);
+            } else if (responsesWithdrawn > 0) {
+              Alert.alert("Profile deactivated", `${responsesWithdrawn} of your bid(s) were withdrawn.`);
+            }
+          } catch (err: any) {
+            Alert.alert("Couldn't deactivate profile", err.message ?? "Please try again");
+          } finally {
+            setIsDeactivating(false);
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete your account?",
+      "This permanently removes you from every profile you're a team member on and deletes your account. This can't be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete Account",
+          style: "destructive",
+          onPress: async () => {
+            setIsDeletingAccount(true);
+            try {
+              await deleteMyAccount(token!);
+              await signOut();
+            } catch (err: any) {
+              Alert.alert("Couldn't delete account", err.message ?? "Please try again");
+            } finally {
+              setIsDeletingAccount(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -13,7 +81,7 @@ export default function ProfileScreen({ navigation }: any) {
         <Text style={styles.headerTitle}>Your Profile</Text>
       </View>
 
-      <View style={styles.body}>
+      <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.avatarRow}>
           <Avatar label={activeProfile?.companyName ?? "?"} size={64} />
           <View style={styles.avatarText}>
@@ -25,8 +93,13 @@ export default function ProfileScreen({ navigation }: any) {
         </View>
 
         <View style={styles.row}>
+          <Text style={styles.label}>Your Name</Text>
+          <Text style={styles.value}>{userName ?? "Not set"}</Text>
+        </View>
+
+        <View style={styles.row}>
           <Text style={styles.label}>Phone Number</Text>
-          <Text style={styles.value}>{activeProfile?.phoneNumber}</Text>
+          <Text style={styles.value}>{userPhoneNumber}</Text>
         </View>
 
         <View style={styles.row}>
@@ -44,10 +117,32 @@ export default function ProfileScreen({ navigation }: any) {
           </TouchableOpacity>
         )}
 
+        {canManageTeam && (
+          <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate("EditProfile")}>
+            <Text style={styles.teamButtonText}>Edit Profile</Text>
+          </TouchableOpacity>
+        )}
+
+        {isOwner && (
+          <TouchableOpacity style={styles.deactivateButton} onPress={handleDeactivate} disabled={isDeactivating}>
+            {isDeactivating ? <ActivityIndicator color="#B00020" /> : <Text style={styles.deactivateButtonText}>Deactivate Profile</Text>}
+          </TouchableOpacity>
+        )}
+
+        {!isOwner && (
+          <TouchableOpacity style={styles.deactivateButton} onPress={handleDeleteAccount} disabled={isDeletingAccount}>
+            {isDeletingAccount ? (
+              <ActivityIndicator color="#B00020" />
+            ) : (
+              <Text style={styles.deactivateButtonText}>Delete My Account</Text>
+            )}
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity style={styles.logoutButton} onPress={signOut}>
           <Text style={styles.logoutText}>Log out</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -73,6 +168,15 @@ const styles = StyleSheet.create({
   teamButton: { marginTop: 32, backgroundColor: "#F0FBF9", borderRadius: 8, paddingVertical: 14, alignItems: "center" },
   secondaryButton: { marginTop: 12, backgroundColor: "#F0FBF9", borderRadius: 8, paddingVertical: 14, alignItems: "center" },
   teamButtonText: { color: "#128C7E", fontWeight: "600" },
+  deactivateButton: {
+    marginTop: 12,
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#B00020",
+  },
+  deactivateButtonText: { color: "#B00020", fontWeight: "600" },
   logoutButton: { marginTop: 12, backgroundColor: "#eee", borderRadius: 8, paddingVertical: 14, alignItems: "center" },
   logoutText: { color: "#333", fontWeight: "600" },
 });

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useAuth } from "../context/AuthContext";
@@ -19,15 +20,22 @@ import TeamMembersScreen from "../screens/TeamMembersScreen";
 import AddTeamMemberScreen from "../screens/AddTeamMemberScreen";
 import SwitchProfileScreen from "../screens/SwitchProfileScreen";
 import AddProfileScreen from "../screens/AddProfileScreen";
+import EditProfileScreen from "../screens/EditProfileScreen";
+import GroupMembersScreen from "../screens/GroupMembersScreen";
+import GroupInfoScreen from "../screens/GroupInfoScreen";
+import ValXChatScreen from "../screens/ValXChatScreen";
 
 const ChatsStack = createNativeStackNavigator();
 function ChatsStackNavigator() {
   return (
     <ChatsStack.Navigator screenOptions={{ headerShown: false }}>
       <ChatsStack.Screen name="GroupList" component={GroupListScreen} />
+      <ChatsStack.Screen name="ValXChat" component={ValXChatScreen} />
       <ChatsStack.Screen name="CreateGroup" component={CreateGroupScreen} />
       <ChatsStack.Screen name="GroupDetail" component={GroupDetailScreen} />
+      <ChatsStack.Screen name="GroupInfo" component={GroupInfoScreen} />
       <ChatsStack.Screen name="GroupSuppliers" component={GroupSuppliersScreen} />
+      <ChatsStack.Screen name="GroupMembers" component={GroupMembersScreen} />
       <ChatsStack.Screen name="AddSuppliers" component={AddSuppliersScreen} />
       <ChatsStack.Screen name="CreateBid" component={CreateBidScreen} />
       <ChatsStack.Screen name="BidDetail" component={BidDetailScreen} />
@@ -57,6 +65,7 @@ function ProfileStackNavigator() {
       <ProfileStack.Screen name="AddTeamMember" component={AddTeamMemberScreen} />
       <ProfileStack.Screen name="SwitchProfile" component={SwitchProfileScreen} />
       <ProfileStack.Screen name="AddProfile" component={AddProfileScreen} />
+      <ProfileStack.Screen name="EditProfile" component={EditProfileScreen} />
     </ProfileStack.Navigator>
   );
 }
@@ -85,11 +94,35 @@ export default function MainTabNavigator() {
       <Tab.Screen
         name="UpdatesTab"
         component={UpdatesStackNavigator}
-        options={{ title: "Updates", tabBarBadge: unreadCount > 0 ? unreadCount : undefined }}
+        options={{
+          title: "Updates",
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name={focused ? "notifications" : "notifications-outline"} size={size} color={color} />
+          ),
+        }}
         listeners={{ focus: refreshUnreadCount }}
       />
-      <Tab.Screen name="ChatsTab" component={ChatsStackNavigator} options={{ title: "Chats" }} />
-      <Tab.Screen name="ProfileTab" component={ProfileStackNavigator} options={{ title: "Profile" }} />
+      <Tab.Screen
+        name="ChatsTab"
+        component={ChatsStackNavigator}
+        options={{
+          title: "Chats",
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name={focused ? "chatbubble-ellipses" : "chatbubble-ellipses-outline"} size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="ProfileTab"
+        component={ProfileStackNavigator}
+        options={{
+          title: "Profile",
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name={focused ? "person-circle" : "person-circle-outline"} size={size} color={color} />
+          ),
+        }}
+      />
     </Tab.Navigator>
   );
 }

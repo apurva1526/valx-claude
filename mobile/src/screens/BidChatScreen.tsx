@@ -63,7 +63,7 @@ export default function BidChatScreen({ route, navigation }: any) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
     >
       <View style={styles.header}>
@@ -80,6 +80,7 @@ export default function BidChatScreen({ route, navigation }: any) {
         </View>
       ) : (
         <FlatList
+          contentInsetAdjustmentBehavior="never"
           style={styles.list}
           contentContainerStyle={styles.listContent}
           data={messages}

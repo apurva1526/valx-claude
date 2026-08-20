@@ -2,7 +2,7 @@ import { Group, GroupSupplier, ProfileType } from "@prisma/client";
 import { prisma } from "./prisma";
 
 type GroupWithSuppliers = Group & {
-  suppliers: GroupSupplier[];
+  suppliers: (GroupSupplier & { supplierProfile: { deactivatedAt: Date | null } | null })[];
   buyerProfile: { companyName: string };
 };
 
@@ -12,7 +12,10 @@ export async function getGroupForProfile(
 ): Promise<{ group: GroupWithSuppliers | null; isMember: boolean }> {
   const group = await prisma.group.findUnique({
     where: { id: groupId },
-    include: { suppliers: true, buyerProfile: { select: { companyName: true } } },
+    include: {
+      suppliers: { include: { supplierProfile: { select: { deactivatedAt: true } } } },
+      buyerProfile: { select: { companyName: true } },
+    },
   });
 
   if (!group) {

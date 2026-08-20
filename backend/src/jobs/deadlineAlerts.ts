@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma";
 import { notifyRecipients } from "../lib/notifications";
+import { sendPushForNotifications } from "../lib/push";
 
 const CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 const DEADLINE_WINDOW_MS = 2 * 60 * 60 * 1000; // 2 hours
@@ -37,10 +38,13 @@ async function runDeadlineAlertCheck(): Promise<void> {
         message: `"${bid.title}" closes in under 2 hours and you haven't bid yet`,
       }));
 
-    await prisma.$transaction(async (tx) => {
-      await notifyRecipients(tx, "BID_DEADLINE_APPROACHING", bid.id, recipients);
+    const notified = await prisma.$transaction(async (tx) => {
+      const notified = await notifyRecipients(tx, "BID_DEADLINE_APPROACHING", bid.id, recipients);
       await tx.bid.update({ where: { id: bid.id }, data: { deadlineAlertSentAt: new Date() } });
+      return notified;
     });
+
+    sendPushForNotifications(notified, { bidId: bid.id, groupId: bid.groupId }).catch(() => {});
   }
 }
 

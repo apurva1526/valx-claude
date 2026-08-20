@@ -1,5 +1,15 @@
 import React, { useState } from "react";
-import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+} from "react-native";
 import { requestOtp } from "../api/auth";
 
 export default function PhoneEntryScreen({ navigation }: any) {
@@ -23,26 +33,29 @@ export default function PhoneEntryScreen({ navigation }: any) {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>ValX</Text>
-      <Text style={styles.subtitle}>Enter your phone number</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Phone number"
-        keyboardType="phone-pad"
-        value={phoneNumber}
-        onChangeText={setPhoneNumber}
-        autoFocus
-      />
-      <TouchableOpacity style={styles.button} onPress={handleGetOtp} disabled={isSubmitting}>
-        {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Get OTP</Text>}
-      </TouchableOpacity>
-    </View>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <Text style={styles.title}>ValX</Text>
+        <Text style={styles.subtitle}>Enter your phone number</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Phone number"
+          keyboardType="phone-pad"
+          value={phoneNumber}
+          onChangeText={setPhoneNumber}
+          autoFocus
+        />
+        <TouchableOpacity style={styles.button} onPress={handleGetOtp} disabled={isSubmitting}>
+          {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Get OTP</Text>}
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: "#fff" },
+  content: { flexGrow: 1, justifyContent: "center", padding: 24 },
   title: { fontSize: 32, fontWeight: "700", marginBottom: 8, textAlign: "center" },
   subtitle: { fontSize: 16, color: "#555", marginBottom: 24, textAlign: "center" },
   input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 14, fontSize: 16, marginBottom: 16 },

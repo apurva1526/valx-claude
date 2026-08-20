@@ -45,6 +45,10 @@ export default function MakeBidModal({
       Alert.alert("Enter a valid price");
       return;
     }
+    if (yourResponse && parsed >= yourResponse.price) {
+      Alert.alert("Price too high", `Your revised price must be lower than your previous price (${currencySymbol}${yourResponse.price})`);
+      return;
+    }
     setIsSubmitting(true);
     try {
       await submitResponse(
@@ -65,7 +69,7 @@ export default function MakeBidModal({
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView
         style={styles.backdrop}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 40 : 0}
       >
         <View style={styles.sheet}>

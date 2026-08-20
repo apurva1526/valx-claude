@@ -10,10 +10,12 @@ interface AuthContextValue {
   token: string | null;
   activeProfile: Profile | null;
   userName: string | null;
+  userPhoneNumber: string | null;
   signIn: (token: string) => Promise<void>;
   signOut: () => Promise<void>;
-  setActiveProfile: (profile: Profile) => void;
+  setActiveProfile: (profile: Profile | null) => void;
   setUserName: (name: string | null) => void;
+  setUserPhoneNumber: (phoneNumber: string | null) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -21,8 +23,9 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
-  const [activeProfile, setActiveProfile] = useState<Profile | null>(null);
+  const [activeProfile, setActiveProfileState] = useState<Profile | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
+  const [userPhoneNumber, setUserPhoneNumber] = useState<string | null>(null);
 
   useEffect(() => {
     SecureStore.getItemAsync(TOKEN_KEY).then((stored) => {
@@ -40,13 +43,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await SecureStore.deleteItemAsync(TOKEN_KEY);
     await SecureStore.deleteItemAsync(LAST_PROFILE_KEY);
     setToken(null);
-    setActiveProfile(null);
+    setActiveProfileState(null);
     setUserName(null);
+    setUserPhoneNumber(null);
   };
 
-  const chooseActiveProfile = (profile: Profile) => {
-    setActiveProfile(profile);
-    SecureStore.setItemAsync(LAST_PROFILE_KEY, profile.id).catch(() => {});
+  const chooseActiveProfile = (profile: Profile | null) => {
+    setActiveProfileState(profile);
+    if (profile) {
+      SecureStore.setItemAsync(LAST_PROFILE_KEY, profile.id).catch(() => {});
+    }
   };
 
   const value = useMemo(
@@ -55,12 +61,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       token,
       activeProfile,
       userName,
+      userPhoneNumber,
       signIn,
       signOut,
       setActiveProfile: chooseActiveProfile,
       setUserName,
+      setUserPhoneNumber,
     }),
-    [isLoading, token, activeProfile, userName]
+    [isLoading, token, activeProfile, userName, userPhoneNumber]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

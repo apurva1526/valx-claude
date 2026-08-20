@@ -23,7 +23,7 @@ export async function verifyOtpHandler(req: Request, res: Response) {
   }
   const phoneNumber = normalizePhoneNumber(rawPhoneNumber);
 
-  if (!verifyOtp(phoneNumber, otp)) {
+  if (!(await verifyOtp(phoneNumber, otp))) {
     return res.status(401).json({ error: "Invalid OTP" });
   }
 
@@ -59,4 +59,25 @@ export async function setMyName(req: AuthedRequest, res: Response) {
   });
 
   res.status(200).json({ name: user.name });
+}
+
+// Team members don't own a company Profile, so unlike deactivateProfile (soft, reversible,
+// scoped to the profile the owner controls), this is a hard, irreversible delete of the
+// person's own identity: every profile they're a team member on, plus their User row.
+export async function deleteMyAccount(req: AuthedRequest, res: Response) {
+  const userId = req.user!.userId;
+
+  const ownedProfilesCount = await prisma.profile.count({ where: { userId } });
+  if (ownedProfilesCount > 0) {
+    return res.status(409).json({
+      error: "You own a company profile — deactivate it from Profile settings instead of deleting your account.",
+    });
+  }
+
+  await prisma.$transaction([
+    prisma.teamMember.deleteMany({ where: { userId } }),
+    prisma.user.delete({ where: { id: userId } }),
+  ]);
+
+  res.status(204).send();
 }

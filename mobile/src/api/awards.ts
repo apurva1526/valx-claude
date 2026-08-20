@@ -9,7 +9,7 @@ interface Auth {
 export function closeBid(
   auth: Auth,
   bidId: string,
-  awardedSupplierIds: string[]
+  awards: { supplierProfileId: string; comment?: string }[]
 ): Promise<{ award: AwardRecord }> {
-  return post(`/bids/${bidId}/close`, { awardedSupplierIds }, auth);
+  return post(`/bids/${bidId}/close`, { awards }, auth);
 }

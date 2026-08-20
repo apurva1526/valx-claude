@@ -12,6 +12,15 @@ export async function getMyNotifications(req: ProfileScopedRequest, res: Respons
   res.status(200).json({ notifications });
 }
 
+export async function markAllNotificationsRead(req: ProfileScopedRequest, res: Response) {
+  await prisma.notification.updateMany({
+    where: { recipientProfileId: req.profile!.id, readAt: null },
+    data: { readAt: new Date() },
+  });
+
+  res.status(204).send();
+}
+
 export async function markNotificationRead(req: ProfileScopedRequest, res: Response) {
   const { id } = req.params;
 

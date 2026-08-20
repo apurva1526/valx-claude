@@ -56,6 +56,7 @@ export default function SwitchProfileScreen({ navigation }: any) {
       </View>
 
       <FlatList
+        contentInsetAdjustmentBehavior="never"
         style={styles.list}
         data={profiles}
         keyExtractor={(item) => item.id}

@@ -5,11 +5,19 @@ import { addSuppliers } from "../api/groups";
 import { useContactsPicker } from "../hooks/useContactsPicker";
 
 export default function AddSuppliersScreen({ route, navigation }: any) {
-  const { groupId } = route.params;
+  const { groupId, fromCreate } = route.params;
   const { token, activeProfile } = useAuth();
   const { isLoadingContacts, permissionDenied, search, setSearch, filtered, selected, toggle, selectedContacts } =
     useContactsPicker();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const finish = () => {
+    if (fromCreate) {
+      navigation.replace("GroupDetail", { groupId });
+    } else {
+      navigation.goBack();
+    }
+  };
 
   const handleSubmit = async () => {
     if (selectedContacts.length === 0) {
@@ -18,12 +26,20 @@ export default function AddSuppliersScreen({ route, navigation }: any) {
     }
     setIsSubmitting(true);
     try {
-      await addSuppliers(
+      const { skipped } = await addSuppliers(
         { token: token!, profileId: activeProfile!.id },
         groupId,
         selectedContacts.map((c) => ({ phoneNumber: c.phoneNumber, name: c.name }))
       );
-      navigation.goBack();
+      if (skipped.length > 0) {
+        Alert.alert(
+          "Some contacts weren't added",
+          skipped.map((s) => `${s.phoneNumber}: ${s.reason}`).join("\n"),
+          [{ text: "OK", onPress: finish }]
+        );
+      } else {
+        finish();
+      }
     } catch (err: any) {
       Alert.alert("Couldn't add suppliers", err.message ?? "Please try again");
     } finally {
@@ -52,8 +68,8 @@ export default function AddSuppliersScreen({ route, navigation }: any) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.back}>{"‹ Cancel"}</Text>
+        <TouchableOpacity onPress={finish}>
+          <Text style={styles.back}>{fromCreate ? "Skip" : "‹ Cancel"}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Add Suppliers</Text>
         <TouchableOpacity onPress={handleSubmit} disabled={isSubmitting}>
@@ -64,8 +80,10 @@ export default function AddSuppliersScreen({ route, navigation }: any) {
       <TextInput style={styles.search} placeholder="Search contacts" value={search} onChangeText={setSearch} />
 
       <FlatList
+        contentInsetAdjustmentBehavior="never"
         data={filtered}
         keyExtractor={(item) => item.id}
+        keyboardShouldPersistTaps="handled"
         ListEmptyComponent={<Text style={styles.emptyText}>No contacts with phone numbers found.</Text>}
         renderItem={({ item }) => {
           const isSelected = selected.has(item.id);

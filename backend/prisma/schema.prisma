@@ -22,15 +22,16 @@ model User {
 }
 
 model Profile {
-  id          String      @id @default(uuid())
-  userId      String
-  user        User        @relation(fields: [userId], references: [id])
-  phoneNumber String
-  companyName String
-  profileType ProfileType
-  gstNumber   String?
-  logoUrl     String?
-  createdAt   DateTime    @default(now())
+  id            String      @id @default(uuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  phoneNumber   String
+  companyName   String
+  profileType   ProfileType
+  gstNumber     String?
+  logoUrl       String?
+  createdAt     DateTime    @default(now())
+  deactivatedAt DateTime?
 
   groupsOwned      Group[]         @relation("BuyerGroups")
   groupMemberships GroupSupplier[]
@@ -39,6 +40,8 @@ model Profile {
   notifications    Notification[]
   awardsClosedBy   AwardRecord[]
   teamMembers      TeamMember[]
+  pins             Pin[]
+  pushTokens       PushToken[]
 
   @@unique([phoneNumber, companyName, profileType])
 }
@@ -92,6 +95,7 @@ model AwardRecord {
   bidId              String   @unique
   bid                Bid      @relation(fields: [bidId], references: [id])
   awardedSupplierIds String[]
+  supplierComments   Json?
   averagePrice       Float?
   closedByProfileId  String
   closedByProfile    Profile  @relation(fields: [closedByProfileId], references: [id])
@@ -103,6 +107,10 @@ enum NotificationType {
   BID_CREATED
   BID_CLOSED
   BID_DEADLINE_APPROACHING
+  BID_RESPONSE_SUBMITTED
+  ADDED_TO_GROUP
+  NEW_CHAT_MESSAGE
+  PROFILE_DEACTIVATED
 }
 
 model Notification {
@@ -118,16 +126,17 @@ model Notification {
 }
 
 model BidResponse {
-  id                String   @id @default(uuid())
+  id                String    @id @default(uuid())
   bidId             String
-  bid               Bid      @relation(fields: [bidId], references: [id])
+  bid               Bid       @relation(fields: [bidId], references: [id])
   supplierProfileId String
-  supplierProfile   Profile  @relation(fields: [supplierProfileId], references: [id])
+  supplierProfile   Profile   @relation(fields: [supplierProfileId], references: [id])
   price             Float
   comment           String?
-  revisionNumber    Int      @default(1)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  revisionNumber    Int       @default(1)
+  revokedAt         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   revisions BidResponseRevision[]
 
@@ -141,6 +150,7 @@ model BidResponseRevision {
   price          Float
   comment        String?
   revisionNumber Int
+  revokedAt      DateTime?
   createdAt      DateTime    @default(now())
 }
 
@@ -177,4 +187,36 @@ model TeamMember {
   createdAt    DateTime    @default(now())
 
   @@unique([profileId, phoneNumber])
+}
+
+enum PinType {
+  GROUP
+  BID
+}
+
+model Pin {
+  id        String   @id @default(uuid())
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id])
+  type      PinType
+  targetId  String
+  createdAt DateTime @default(now())
+
+  @@unique([profileId, type, targetId])
+}
+
+model PushToken {
+  id        String   @id @default(uuid())
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id])
+  token     String
+  createdAt DateTime @default(now())
+
+  @@unique([profileId, token])
+}
+
+model OtpChallenge {
+  phoneNumber String   @id
+  sessionId   String
+  createdAt   DateTime @default(now())
 }

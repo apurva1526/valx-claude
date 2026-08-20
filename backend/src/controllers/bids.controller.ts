@@ -4,8 +4,10 @@ import { prisma } from "../lib/prisma";
 import { ProfileScopedRequest } from "../middleware/activeProfile";
 import { getGroupForProfile } from "../lib/groupAccess";
 import { notifyGroupSuppliers } from "../lib/notifications";
+import { sendPushForNotifications } from "../lib/push";
 import { getChatFirestore } from "../lib/firebase";
 import { assertGroupInScope } from "../middleware/requirePermission";
+import { getPinnedIds, sortPinnedFirst } from "../lib/pins";
 
 interface ValidatedBidFields {
   title: string;
@@ -68,7 +70,7 @@ export async function createBid(req: ProfileScopedRequest, res: Response) {
     return res.status(400).json({ error: fields.error });
   }
 
-  const bid = await prisma.$transaction(async (tx) => {
+  const { bid, notified } = await prisma.$transaction(async (tx) => {
     const created = await tx.bid.create({
       data: {
         groupId,
@@ -77,7 +79,7 @@ export async function createBid(req: ProfileScopedRequest, res: Response) {
       },
     });
 
-    await notifyGroupSuppliers(
+    const notified = await notifyGroupSuppliers(
       tx,
       groupId,
       "BID_CREATED",
@@ -85,8 +87,10 @@ export async function createBid(req: ProfileScopedRequest, res: Response) {
       created.id
     );
 
-    return created;
+    return { bid: created, notified };
   });
+
+  sendPushForNotifications(notified, { bidId: bid.id, groupId }).catch(() => {});
 
   try {
     const priceLine = bid.targetPrice != null ? `\nTarget price: ${bid.targetPriceCurrency} ${bid.targetPrice}` : "";
@@ -132,10 +136,10 @@ export async function updateBid(req: ProfileScopedRequest, res: Response) {
     return res.status(400).json({ error: fields.error });
   }
 
-  const bid = await prisma.$transaction(async (tx) => {
+  const { bid, notified } = await prisma.$transaction(async (tx) => {
     const updated = await tx.bid.update({ where: { id: bidId }, data: fields });
 
-    await notifyGroupSuppliers(
+    const notified = await notifyGroupSuppliers(
       tx,
       existingBid.groupId,
       "BID_EDITED",
@@ -143,10 +147,39 @@ export async function updateBid(req: ProfileScopedRequest, res: Response) {
       updated.id
     );
 
-    return updated;
+    return { bid: updated, notified };
   });
 
+  sendPushForNotifications(notified, { bidId: bid.id, groupId: existingBid.groupId }).catch(() => {});
+
   res.status(200).json({ bid });
+}
+
+export async function getOngoingBids(req: ProfileScopedRequest, res: Response) {
+  const { id: profileId, profileType } = req.profile!;
+  const { scopeGroupId } = req.access!;
+
+  const groupWhere =
+    profileType === "BUYER"
+      ? { buyerProfileId: profileId }
+      : { suppliers: { some: { supplierProfileId: profileId } } };
+
+  const bids = await prisma.bid.findMany({
+    where: {
+      status: "ONGOING",
+      group: groupWhere,
+      ...(scopeGroupId ? { groupId: scopeGroupId } : {}),
+    },
+    include: { group: { select: { name: true } } },
+    orderBy: { validityDeadline: "asc" },
+  });
+
+  res.status(200).json({
+    bids: bids.map((b) => {
+      const { group, ...bid } = b;
+      return { ...bid, groupName: group.name };
+    }),
+  });
 }
 
 export async function getGroupBids(req: ProfileScopedRequest, res: Response) {
@@ -176,7 +209,33 @@ export async function getGroupBids(req: ProfileScopedRequest, res: Response) {
     });
   }
 
-  res.status(200).json({ bids });
+  const pinnedIds = await getPinnedIds(req.profile!.id, "BID");
+  res.status(200).json({ bids: sortPinnedFirst(bids, pinnedIds) });
+}
+
+export async function pinBid(req: ProfileScopedRequest, res: Response) {
+  const { id: bidId } = req.params;
+  const bid = await prisma.bid.findUnique({ where: { id: bidId } });
+  if (!bid) {
+    return res.status(404).json({ error: "Bid not found" });
+  }
+  const { isMember } = await getGroupForProfile(bid.groupId, req.profile!);
+  if (!isMember || !assertGroupInScope(req, bid.groupId)) {
+    return res.status(403).json({ error: "You are not a member of this bid's group" });
+  }
+
+  await prisma.pin.upsert({
+    where: { profileId_type_targetId: { profileId: req.profile!.id, type: "BID", targetId: bidId } },
+    update: {},
+    create: { profileId: req.profile!.id, type: "BID", targetId: bidId },
+  });
+  res.status(204).send();
+}
+
+export async function unpinBid(req: ProfileScopedRequest, res: Response) {
+  const { id: bidId } = req.params;
+  await prisma.pin.deleteMany({ where: { profileId: req.profile!.id, type: "BID", targetId: bidId } });
+  res.status(204).send();
 }
 
 export async function getBidDetail(req: ProfileScopedRequest, res: Response) {
@@ -198,15 +257,25 @@ export async function getBidDetail(req: ProfileScopedRequest, res: Response) {
     return res.status(403).json({ error: "You are not a member of this bid's group" });
   }
 
+  const unreadChat = await prisma.notification.findFirst({
+    where: { recipientProfileId: req.profile!.id, bidId, type: "NEW_CHAT_MESSAGE", readAt: null },
+  });
+  const hasUnreadChat = !!unreadChat;
+
   if (req.profile!.profileType === "BUYER" || !bid.awardRecord) {
-    return res.status(200).json({ bid });
+    return res.status(200).json({ bid: { ...bid, hasUnreadChat } });
   }
 
   const { awardRecord, ...bidWithoutAward } = bid;
+  const supplierComments = (awardRecord.supplierComments as Record<string, string> | null) ?? null;
   res.status(200).json({
     bid: {
       ...bidWithoutAward,
-      awardOutcome: { wasAwarded: awardRecord.awardedSupplierIds.includes(req.profile!.id) },
+      hasUnreadChat,
+      awardOutcome: {
+        wasAwarded: awardRecord.awardedSupplierIds.includes(req.profile!.id),
+        comment: supplierComments?.[req.profile!.id] ?? null,
+      },
     },
   });
 }

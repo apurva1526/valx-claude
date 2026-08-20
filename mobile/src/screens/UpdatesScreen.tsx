@@ -1,8 +1,8 @@
 import React, { useCallback, useState } from "react";
 import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
+import { CommonActions, useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../context/AuthContext";
-import { getNotifications, markNotificationRead, Notification } from "../api/notifications";
+import { getNotifications, markAllNotificationsRead, Notification } from "../api/notifications";
 
 export default function UpdatesScreen({ navigation }: any) {
   const { token, activeProfile } = useAuth();
@@ -14,20 +14,43 @@ export default function UpdatesScreen({ navigation }: any) {
   const load = useCallback(() => {
     setIsLoading(true);
     getNotifications(auth)
-      .then(({ notifications }) => setNotifications(notifications))
+      .then(({ notifications }) => {
+        setNotifications(notifications);
+        if (notifications.some((n) => !n.readAt)) {
+          markAllNotificationsRead(auth).catch(() => {});
+        }
+      })
       .catch((err) => Alert.alert("Couldn't load updates", err.message ?? "Please try again"))
       .finally(() => setIsLoading(false));
   }, [token, activeProfile]);
 
   useFocusEffect(load);
 
-  const handlePress = async (item: Notification) => {
-    if (!item.readAt) {
-      setNotifications((prev) => prev.map((n) => (n.id === item.id ? { ...n, readAt: new Date().toISOString() } : n)));
-      markNotificationRead(auth, item.id).catch(() => {});
-    }
-    if (item.bidId) {
+  const handlePress = (item: Notification) => {
+    if (item.bidId && item.bid?.groupId) {
+      const groupId = item.bid.groupId;
+      const chatsRoutes: { name: string; params?: object }[] = [
+        { name: "GroupList" },
+        { name: "GroupDetail", params: { groupId } },
+        { name: "BidDetail", params: { bidId: item.bidId } },
+      ];
+      if (item.type === "NEW_CHAT_MESSAGE") {
+        chatsRoutes.push({ name: "BidChat", params: { bidId: item.bidId } });
+      }
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 1,
+          routes: [
+            { name: "UpdatesTab" },
+            { name: "ChatsTab", state: { routes: chatsRoutes, index: chatsRoutes.length - 1 } },
+            { name: "ProfileTab" },
+          ],
+        })
+      );
+    } else if (item.bidId) {
       navigation.navigate("ChatsTab", { screen: "BidDetail", params: { bidId: item.bidId } });
+    } else {
+      navigation.navigate("ChatsTab", { screen: "GroupList" });
     }
   };
 
@@ -38,6 +61,7 @@ export default function UpdatesScreen({ navigation }: any) {
       </View>
 
       <FlatList
+        contentInsetAdjustmentBehavior="never"
         data={notifications}
         keyExtractor={(item) => item.id}
         refreshing={isLoading}

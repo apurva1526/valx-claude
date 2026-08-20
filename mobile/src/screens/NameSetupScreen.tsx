@@ -1,5 +1,15 @@
 import React, { useState } from "react";
-import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+} from "react-native";
 import { setMyName } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
 
@@ -26,21 +36,24 @@ export default function NameSetupScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Welcome to ValX</Text>
-      <Text style={styles.subtitle}>You've been added as a team member. Just need your name to continue.</Text>
+    <KeyboardAvoidingView style={styles.outer} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <Text style={styles.title}>Welcome to ValX</Text>
+        <Text style={styles.subtitle}>You've been added as a team member. Just need your name to continue.</Text>
 
-      <TextInput style={styles.input} placeholder="Your name" value={name} onChangeText={setName} autoFocus />
+        <TextInput style={styles.input} placeholder="Your name" value={name} onChangeText={setName} autoFocus />
 
-      <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={isSubmitting}>
-        {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Continue</Text>}
-      </TouchableOpacity>
-    </View>
+        <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={isSubmitting}>
+          {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Continue</Text>}
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "#fff" },
+  outer: { flex: 1, backgroundColor: "#fff" },
+  container: { flexGrow: 1, justifyContent: "center", padding: 24 },
   title: { fontSize: 22, fontWeight: "700", marginBottom: 8, textAlign: "center" },
   subtitle: { fontSize: 14, color: "#666", marginBottom: 24, textAlign: "center" },
   input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 14, fontSize: 16, marginBottom: 16 },

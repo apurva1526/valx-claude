@@ -14,7 +14,7 @@ export async function resolveProfileAccess(
   userId: string
 ): Promise<ResolvedProfileAccess | null> {
   const profile = await prisma.profile.findUnique({ where: { id: profileId } });
-  if (!profile) return null;
+  if (!profile || profile.deactivatedAt) return null;
 
   if (profile.userId === userId) {
     return { profile, level: "OWNER", scopeGroupId: null };

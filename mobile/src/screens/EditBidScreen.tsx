@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity } from "react-native";
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import { Currency, updateBid } from "../api/bids";
 import BidFormFields from "../components/BidFormFields";
@@ -41,32 +41,35 @@ export default function EditBidScreen({ route, navigation }: any) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>Edit Bid</Text>
-      <Text style={styles.notice}>Every supplier on this bid will be notified of the change.</Text>
+    <KeyboardAvoidingView style={styles.outer} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <Text style={styles.title}>Edit Bid</Text>
+        <Text style={styles.notice}>Every supplier on this bid will be notified of the change.</Text>
 
-      <BidFormFields
-        title={title}
-        onTitleChange={setTitle}
-        description={description}
-        onDescriptionChange={setDescription}
-        targetPrice={targetPrice}
-        onTargetPriceChange={setTargetPrice}
-        currency={currency}
-        onCurrencyChange={setCurrency}
-        deadline={deadline}
-        onDeadlineChange={setDeadline}
-      />
+        <BidFormFields
+          title={title}
+          onTitleChange={setTitle}
+          description={description}
+          onDescriptionChange={setDescription}
+          targetPrice={targetPrice}
+          onTargetPriceChange={setTargetPrice}
+          currency={currency}
+          onCurrencyChange={setCurrency}
+          deadline={deadline}
+          onDeadlineChange={setDeadline}
+        />
 
-      <TouchableOpacity style={styles.button} onPress={handleSave} disabled={isSubmitting}>
-        {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Changes</Text>}
-      </TouchableOpacity>
-    </ScrollView>
+        <TouchableOpacity style={styles.button} onPress={handleSave} disabled={isSubmitting}>
+          {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Changes</Text>}
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: 24, paddingTop: 64, backgroundColor: "#fff" },
+  outer: { flex: 1, backgroundColor: "#fff" },
+  container: { flexGrow: 1, padding: 24, paddingTop: 64 },
   title: { fontSize: 22, fontWeight: "700", marginBottom: 8 },
   notice: { fontSize: 13, color: "#888", marginBottom: 20 },
   button: { backgroundColor: "#128C7E", borderRadius: 8, padding: 14, alignItems: "center" },

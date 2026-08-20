@@ -1,5 +1,17 @@
 import React, { useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useAuth } from "../context/AuthContext";
 import { closeBid } from "../api/awards";
 import { BuyerResponseRow } from "../api/bidResponses";
@@ -21,6 +33,7 @@ export default function CloseBidModal({
 }) {
   const { token, activeProfile } = useAuth();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [comments, setComments] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const toggle = (supplierProfileId: string) => {
@@ -35,7 +48,11 @@ export default function CloseBidModal({
   const handleClose = async () => {
     setIsSubmitting(true);
     try {
-      await closeBid({ token: token!, profileId: activeProfile!.id }, bidId, Array.from(selected));
+      const awards = Array.from(selected).map((supplierProfileId) => ({
+        supplierProfileId,
+        comment: comments[supplierProfileId]?.trim() || undefined,
+      }));
+      await closeBid({ token: token!, profileId: activeProfile!.id }, bidId, awards);
       onClosed();
       onClose();
     } catch (err: any) {
@@ -47,7 +64,11 @@ export default function CloseBidModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.backdrop}>
+      <KeyboardAvoidingView
+        style={styles.backdrop}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 40 : 0}
+      >
         <View style={styles.sheet}>
           <Text style={styles.title}>Close Bid</Text>
           <Text style={styles.subtitle}>Select suppliers to award, or close with no award.</Text>
@@ -60,21 +81,29 @@ export default function CloseBidModal({
             renderItem={({ item }) => {
               const isSelected = selected.has(item.supplierProfileId);
               return (
-                <TouchableOpacity
-                  style={[styles.row, isSelected && styles.rowSelected]}
-                  onPress={() => toggle(item.supplierProfileId)}
-                >
-                  <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
-                    {isSelected && <Text style={styles.checkmark}>✓</Text>}
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.rowName}>{item.companyName}</Text>
-                    <Text style={styles.rowPrice}>
-                      {currencySymbol}
-                      {item.price}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
+                <View style={[styles.row, isSelected && styles.rowSelected]}>
+                  <TouchableOpacity style={styles.rowTouchable} onPress={() => toggle(item.supplierProfileId)}>
+                    <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
+                      {isSelected && <Text style={styles.checkmark}>✓</Text>}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.rowName}>{item.companyName}</Text>
+                      <Text style={styles.rowPrice}>
+                        {currencySymbol}
+                        {item.price}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                  {isSelected && (
+                    <TextInput
+                      style={styles.commentInput}
+                      placeholder="Optional comment to this supplier"
+                      value={comments[item.supplierProfileId] ?? ""}
+                      onChangeText={(text) => setComments((prev) => ({ ...prev, [item.supplierProfileId]: text }))}
+                      multiline
+                    />
+                  )}
+                </View>
               );
             }}
           />
@@ -92,7 +121,7 @@ export default function CloseBidModal({
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -105,15 +134,25 @@ const styles = StyleSheet.create({
   list: { marginBottom: 16 },
   emptyText: { color: "#888", paddingVertical: 12 },
   row: {
-    flexDirection: "row",
-    alignItems: "center",
     padding: 12,
     borderWidth: 1,
     borderColor: "#eee",
     borderRadius: 8,
     marginBottom: 8,
   },
+  rowTouchable: { flexDirection: "row", alignItems: "center" },
   rowSelected: { borderColor: "#128C7E", backgroundColor: "#F0FBF9" },
+  commentInput: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 13,
+    minHeight: 44,
+    textAlignVertical: "top",
+    backgroundColor: "#fff",
+  },
   checkbox: {
     width: 22,
     height: 22,

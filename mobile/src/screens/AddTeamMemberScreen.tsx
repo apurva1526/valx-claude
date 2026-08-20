@@ -94,8 +94,10 @@ export default function AddTeamMemberScreen({ route, navigation }: any) {
       </View>
 
       <FlatList
+        contentInsetAdjustmentBehavior="never"
         data={filtered}
         keyExtractor={(item) => item.id}
+        keyboardShouldPersistTaps="handled"
         ListEmptyComponent={<Text style={styles.emptyText}>No contacts with phone numbers found.</Text>}
         renderItem={({ item }) => {
           const isSelected = selected.has(item.id);

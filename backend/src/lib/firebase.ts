@@ -8,14 +8,16 @@ let firestore: Firestore | null = null;
 export function getChatFirestore(): Firestore {
   if (firestore) return firestore;
 
-  if (!env.firebaseServiceAccountPath) {
+  if (!env.firebaseServiceAccountJson && !env.firebaseServiceAccountPath) {
     throw new Error(
-      "FIREBASE_SERVICE_ACCOUNT_PATH is not set — chat requires a Firebase service account key. See README for setup."
+      "Neither FIREBASE_SERVICE_ACCOUNT_JSON nor FIREBASE_SERVICE_ACCOUNT_PATH is set — chat requires a Firebase service account key. See README for setup."
     );
   }
 
   if (getApps().length === 0) {
-    const serviceAccount = JSON.parse(readFileSync(env.firebaseServiceAccountPath, "utf-8"));
+    const serviceAccount = env.firebaseServiceAccountJson
+      ? JSON.parse(env.firebaseServiceAccountJson)
+      : JSON.parse(readFileSync(env.firebaseServiceAccountPath!, "utf-8"));
     initializeApp({ credential: cert(serviceAccount) });
   }
 

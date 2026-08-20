@@ -1,5 +1,15 @@
 import React, { useState } from "react";
-import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+} from "react-native";
 import { useAuth } from "../context/AuthContext";
 import { createGroup } from "../api/groups";
 
@@ -20,7 +30,7 @@ export default function CreateGroupScreen({ navigation }: any) {
         { token: token!, profileId: activeProfile!.id },
         { name: name.trim(), description: description.trim() || undefined }
       );
-      navigation.replace("GroupDetail", { groupId: group.id });
+      navigation.replace("AddSuppliers", { groupId: group.id, fromCreate: true });
     } catch (err: any) {
       Alert.alert("Couldn't create group", err.message ?? "Please try again");
     } finally {
@@ -29,28 +39,38 @@ export default function CreateGroupScreen({ navigation }: any) {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>New Group</Text>
-      <TextInput style={styles.input} placeholder="Group name" value={name} onChangeText={setName} autoFocus />
-      <TextInput
-        style={[styles.input, styles.multiline]}
-        placeholder="Description (optional)"
-        value={description}
-        onChangeText={setDescription}
-        multiline
-      />
-      <TouchableOpacity style={styles.button} onPress={handleCreate} disabled={isSubmitting}>
-        {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Create</Text>}
-      </TouchableOpacity>
-    </View>
+    <KeyboardAvoidingView style={styles.outer} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <Text style={styles.title}>New Group</Text>
+        <TextInput style={styles.input} placeholder="Group name" value={name} onChangeText={setName} autoFocus />
+        <TextInput
+          style={styles.descriptionInput}
+          placeholder="Description (optional)"
+          placeholderTextColor="#bbb"
+          value={description}
+          onChangeText={setDescription}
+        />
+        <TouchableOpacity style={styles.button} onPress={handleCreate} disabled={isSubmitting}>
+          {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Create</Text>}
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, paddingTop: 64, backgroundColor: "#fff" },
+  outer: { flex: 1, backgroundColor: "#fff" },
+  container: { flexGrow: 1, padding: 24, paddingTop: 64 },
   title: { fontSize: 22, fontWeight: "700", marginBottom: 24 },
   input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 14, fontSize: 16, marginBottom: 16 },
-  multiline: { minHeight: 80, textAlignVertical: "top" },
+  descriptionInput: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+    paddingVertical: 10,
+    fontSize: 14,
+    color: "#555",
+    marginBottom: 24,
+  },
   button: { backgroundColor: "#128C7E", borderRadius: 8, padding: 14, alignItems: "center" },
   buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
 });

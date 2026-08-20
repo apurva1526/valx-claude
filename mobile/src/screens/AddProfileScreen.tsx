@@ -1,5 +1,15 @@
 import React, { useState } from "react";
-import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { createProfile, ProfileType } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
 import CompanyProfileFields from "../components/CompanyProfileFields";
@@ -23,7 +33,7 @@ export default function AddProfileScreen({ navigation }: any) {
         profileType,
         gstNumber: gstNumber.trim() || undefined,
       });
-      setActiveProfile(profile);
+      setActiveProfile({ ...profile, access: "OWNER", scopeGroupId: null });
       navigation.popToTop();
     } catch (err: any) {
       Alert.alert("Couldn't create profile", err.message ?? "Please try again");
@@ -33,7 +43,7 @@ export default function AddProfileScreen({ navigation }: any) {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.back}>{"‹ Cancel"}</Text>
@@ -42,7 +52,7 @@ export default function AddProfileScreen({ navigation }: any) {
         <View style={{ width: 50 }} />
       </View>
 
-      <View style={styles.body}>
+      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         <CompanyProfileFields
           companyName={companyName}
           onCompanyNameChange={setCompanyName}
@@ -56,8 +66,8 @@ export default function AddProfileScreen({ navigation }: any) {
         <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={isSubmitting}>
           {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Create Profile</Text>}
         </TouchableOpacity>
-      </View>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

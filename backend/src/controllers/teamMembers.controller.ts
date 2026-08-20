@@ -67,13 +67,26 @@ export async function listTeamMembers(req: ProfileScopedRequest, res: Response) 
     return res.status(403).json({ error: "Profile mismatch" });
   }
 
+  const profile = await prisma.profile.findUnique({
+    where: { id: targetProfileId },
+    include: { user: { select: { name: true } } },
+  });
+  if (!profile) {
+    return res.status(404).json({ error: "Profile not found" });
+  }
+
+  const viewerPhoneNumber = req.user!.phoneNumber;
+
   const teamMembers = await prisma.teamMember.findMany({
-    where: { profileId: targetProfileId },
+    where: { profileId: targetProfileId, phoneNumber: { not: viewerPhoneNumber } },
     include: { user: { select: { name: true, phoneNumber: true } } },
     orderBy: { createdAt: "asc" },
   });
 
-  res.status(200).json({ teamMembers });
+  const owner =
+    profile.phoneNumber !== viewerPhoneNumber ? { phoneNumber: profile.phoneNumber, name: profile.user.name } : null;
+
+  res.status(200).json({ owner, teamMembers });
 }
 
 export async function updateTeamMember(req: ProfileScopedRequest, res: Response) {
@@ -107,6 +120,23 @@ export async function updateTeamMember(req: ProfileScopedRequest, res: Response)
 
   const updated = await prisma.teamMember.update({ where: { id: teamMemberId }, data });
   res.status(200).json({ teamMember: updated });
+}
+
+export async function exitTeamMembership(req: ProfileScopedRequest, res: Response) {
+  const { id: targetProfileId } = req.params;
+  if (req.profile!.id !== targetProfileId) {
+    return res.status(403).json({ error: "Profile mismatch" });
+  }
+
+  const membership = await prisma.teamMember.findFirst({
+    where: { profileId: targetProfileId, userId: req.user!.userId },
+  });
+  if (!membership) {
+    return res.status(404).json({ error: "You're not a team member of this profile" });
+  }
+
+  await prisma.teamMember.delete({ where: { id: membership.id } });
+  res.status(204).send();
 }
 
 export async function removeTeamMember(req: ProfileScopedRequest, res: Response) {

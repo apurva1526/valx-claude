@@ -6,6 +6,8 @@ import { getChatFirestore } from "../lib/firebase";
 import { buildChatMaskingContext, maskMessage, RawChatMessage } from "../lib/chatLabels";
 import { broadcastToBid } from "../ws/chatServer";
 import { assertGroupInScope } from "../middleware/requirePermission";
+import { notifyOrTouchBidGroup } from "../lib/notifications";
+import { sendPushForNotifications } from "../lib/push";
 
 async function loadBidAndCheckMembership(req: ProfileScopedRequest, bidId: string) {
   const bid = await prisma.bid.findUnique({ where: { id: bidId } });
@@ -20,6 +22,11 @@ export async function getChatHistory(req: ProfileScopedRequest, res: Response) {
   const { bid, isMember } = await loadBidAndCheckMembership(req, bidId);
   if (!bid) return res.status(404).json({ error: "Bid not found" });
   if (!isMember) return res.status(403).json({ error: "You are not a member of this bid's group" });
+
+  await prisma.notification.updateMany({
+    where: { recipientProfileId: req.profile!.id, bidId, type: "NEW_CHAT_MESSAGE", readAt: null },
+    data: { readAt: new Date() },
+  });
 
   const snapshot = await getChatFirestore()
     .collection("bidChats")
@@ -80,6 +87,16 @@ export async function postChatMessage(req: ProfileScopedRequest, res: Response) 
 
   const ctx = await buildChatMaskingContext(bid.groupId);
   broadcastToBid(bidId, (conn) => maskMessage(raw, conn.profileId, conn.profileType === "BUYER", ctx));
+
+  const notified = await notifyOrTouchBidGroup(
+    prisma,
+    bidId,
+    bid.groupId,
+    req.profile!.id,
+    "NEW_CHAT_MESSAGE",
+    `New message in "${bid.title}"`
+  );
+  sendPushForNotifications(notified, { bidId, groupId: bid.groupId }).catch(() => {});
 
   const messageForSender = maskMessage(raw, req.profile!.id, req.profile!.profileType === "BUYER", ctx);
   res.status(201).json({ message: messageForSender });

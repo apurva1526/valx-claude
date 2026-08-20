@@ -19,7 +19,15 @@ interface Auth {
   profileId: string;
 }
 
-export function listTeamMembers(auth: Auth, profileId: string): Promise<{ teamMembers: TeamMember[] }> {
+export interface TeamOwner {
+  phoneNumber: string;
+  name: string | null;
+}
+
+export function listTeamMembers(
+  auth: Auth,
+  profileId: string
+): Promise<{ owner: TeamOwner | null; teamMembers: TeamMember[] }> {
   return get(`/profiles/${profileId}/team-members`, auth);
 }
 
@@ -41,4 +49,8 @@ export function updateTeamMember(
 
 export function removeTeamMember(auth: Auth, teamMemberId: string): Promise<void> {
   return del(`/team-members/${teamMemberId}`, auth);
+}
+
+export function exitTeamMembership(auth: Auth, profileId: string): Promise<void> {
+  return post(`/profiles/${profileId}/team-members/exit`, {}, auth);
 }

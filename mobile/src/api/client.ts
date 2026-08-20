@@ -11,7 +11,7 @@ interface AuthContext {
   profileId?: string;
 }
 
-const REQUEST_TIMEOUT_MS = 10000;
+const REQUEST_TIMEOUT_MS = 25000;
 
 async function request<T>(path: string, options: RequestInit & AuthContext = {}): Promise<T> {
   const { token, profileId, headers, ...rest } = options;
@@ -35,7 +35,8 @@ async function request<T>(path: string, options: RequestInit & AuthContext = {})
     if (err instanceof Error && err.name === "AbortError") {
       throw new ApiError(`Couldn't reach the server at ${API_BASE_URL} (timed out)`, 0);
     }
-    throw new ApiError(`Couldn't reach the server at ${API_BASE_URL}`, 0);
+    const detail = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+    throw new ApiError(`Couldn't reach the server at ${API_BASE_URL}\n[${detail}]`, 0);
   } finally {
     clearTimeout(timeout);
   }

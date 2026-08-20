@@ -4,6 +4,7 @@ export interface RevisionEntry {
   price: number;
   comment: string | null;
   revisionNumber: number;
+  revokedAt: string | null;
   createdAt: string;
 }
 
@@ -13,6 +14,7 @@ export interface BuyerResponseRow {
   price: number;
   comment: string | null;
   revisionNumber: number;
+  revokedAt: string | null;
   updatedAt: string;
   history: RevisionEntry[];
 }
@@ -21,6 +23,7 @@ export interface YourResponse {
   price: number;
   comment: string | null;
   revisionNumber: number;
+  revokedAt: string | null;
 }
 
 interface Auth {
@@ -38,6 +41,10 @@ export function submitResponse(
 
 export function getBuyerResponses(auth: Auth, bidId: string): Promise<{ responses: BuyerResponseRow[] }> {
   return get(`/bids/${bidId}/responses`, auth);
+}
+
+export function revokeResponse(auth: Auth, bidId: string): Promise<{ response: YourResponse }> {
+  return post(`/bids/${bidId}/responses/revoke`, {}, auth);
 }
 
 export function getSupplierResponses(

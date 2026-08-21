@@ -67,7 +67,7 @@ export async function setMyName(req: AuthedRequest, res: Response) {
 export async function deleteMyAccount(req: AuthedRequest, res: Response) {
   const userId = req.user!.userId;
 
-  const ownedProfilesCount = await prisma.profile.count({ where: { userId } });
+  const ownedProfilesCount = await prisma.profile.count({ where: { userId, deactivatedAt: null } });
   if (ownedProfilesCount > 0) {
     return res.status(409).json({
       error: "You own a company profile — deactivate it from Profile settings instead of deleting your account.",

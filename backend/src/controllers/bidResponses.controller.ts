@@ -10,20 +10,32 @@ import { sendPushForNotifications } from "../lib/push";
 const MAX_REVISIONS = 5;
 
 // Shared core used both by the supplier-initiated revoke route and by deactivateProfile's
-// forced revoke of a deactivated supplier's ongoing responses (which bypasses the 5-revision cap).
+// forced revoke of a deactivated supplier's ongoing responses.
+//
+// `countsAgainstRevisionCap` defaults to true for the voluntary supplier-initiated path,
+// where consuming one of the 5 allowed revisions is the intended cost of revoking. The
+// deactivation path passes false: that revoke is involuntary (the supplier didn't choose
+// it), so it must not permanently burn a revision slot — otherwise a supplier who was
+// already near MAX_REVISIONS when their profile got deactivated would come back from
+// `reactivateProfile` locked out of ever submitting to that bid again, even though they
+// never manually revised or revoked it themselves.
 export async function revokeResponseCore(
   tx: Prisma.TransactionClient,
   bidResponse: { id: string; price: number; comment: string | null; revisionNumber: number },
   bidId: string,
   buyerProfileId: string,
-  message: string
+  message: string,
+  countsAgainstRevisionCap = true
 ) {
-  const nextRevisionNumber = bidResponse.revisionNumber + 1;
+  const historyRevisionNumber = bidResponse.revisionNumber + 1;
   const now = new Date();
 
   const saved = await tx.bidResponse.update({
     where: { id: bidResponse.id },
-    data: { revisionNumber: nextRevisionNumber, revokedAt: now },
+    data: {
+      revisionNumber: countsAgainstRevisionCap ? historyRevisionNumber : bidResponse.revisionNumber,
+      revokedAt: now,
+    },
   });
 
   await tx.bidResponseRevision.create({
@@ -31,7 +43,7 @@ export async function revokeResponseCore(
       bidResponseId: saved.id,
       price: saved.price,
       comment: saved.comment,
-      revisionNumber: nextRevisionNumber,
+      revisionNumber: historyRevisionNumber,
       revokedAt: now,
     },
   });
@@ -73,59 +85,78 @@ export async function submitResponse(req: ProfileScopedRequest, res: Response) {
   }
   const trimmedComment = typeof comment === "string" && comment.trim().length > 0 ? comment.trim() : null;
 
-  const existing = await prisma.bidResponse.findUnique({
-    where: { bidId_supplierProfileId: { bidId, supplierProfileId: req.profile!.id } },
-  });
+  // `existing` is read and validated inside the transaction, not before it: two concurrent
+  // revisions from the same supplier profile (e.g. two team members with EDIT access) would
+  // otherwise both read the same stale price/revisionNumber and both pass the "must be lower"
+  // and revision-cap checks against data the other's write has already superseded.
+  let response, notified;
+  try {
+    ({ response, notified } = await prisma.$transaction(async (tx) => {
+      const existing = await tx.bidResponse.findUnique({
+        where: { bidId_supplierProfileId: { bidId, supplierProfileId: req.profile!.id } },
+      });
 
-  if (existing && existing.revisionNumber >= MAX_REVISIONS) {
-    return res.status(400).json({ error: "Revision limit reached — your last price stands" });
+      if (existing && existing.revisionNumber >= MAX_REVISIONS) {
+        throw new Error("REVISION_LIMIT");
+      }
+      if (existing && parsedPrice >= existing.price) {
+        throw new Error(`PRICE_TOO_HIGH:${existing.price}`);
+      }
+
+      const nextRevisionNumber = existing ? existing.revisionNumber + 1 : 1;
+
+      const saved = await tx.bidResponse.upsert({
+        where: { bidId_supplierProfileId: { bidId, supplierProfileId: req.profile!.id } },
+        create: {
+          bidId,
+          supplierProfileId: req.profile!.id,
+          price: parsedPrice,
+          comment: trimmedComment,
+          revisionNumber: 1,
+        },
+        update: {
+          price: parsedPrice,
+          comment: trimmedComment,
+          revisionNumber: nextRevisionNumber,
+          revokedAt: null,
+        },
+      });
+
+      await tx.bidResponseRevision.create({
+        data: {
+          bidResponseId: saved.id,
+          price: parsedPrice,
+          comment: trimmedComment,
+          revisionNumber: nextRevisionNumber,
+        },
+      });
+
+      const message = existing
+        ? `${req.profile!.companyName} revised their bid on "${bid.title}"`
+        : `New bid from ${req.profile!.companyName} on "${bid.title}"`;
+      const notified = await notifyRecipients(tx, "BID_RESPONSE_SUBMITTED", bidId, [
+        { recipientProfileId: bid.createdByProfileId, message },
+      ]);
+
+      return { response: saved, notified };
+    }));
+  } catch (err) {
+    if (err instanceof Error) {
+      if (err.message === "REVISION_LIMIT") {
+        return res.status(400).json({ error: "Revision limit reached — your last price stands" });
+      }
+      if (err.message.startsWith("PRICE_TOO_HIGH:")) {
+        const previousPrice = err.message.split(":")[1];
+        return res.status(400).json({ error: `Your revised price must be lower than your previous price (${previousPrice})` });
+      }
+    }
+    throw err;
   }
-  if (existing && parsedPrice >= existing.price) {
-    return res.status(400).json({ error: `Your revised price must be lower than your previous price (${existing.price})` });
-  }
-
-  const nextRevisionNumber = existing ? existing.revisionNumber + 1 : 1;
-
-  const { response, notified } = await prisma.$transaction(async (tx) => {
-    const saved = await tx.bidResponse.upsert({
-      where: { bidId_supplierProfileId: { bidId, supplierProfileId: req.profile!.id } },
-      create: {
-        bidId,
-        supplierProfileId: req.profile!.id,
-        price: parsedPrice,
-        comment: trimmedComment,
-        revisionNumber: 1,
-      },
-      update: {
-        price: parsedPrice,
-        comment: trimmedComment,
-        revisionNumber: nextRevisionNumber,
-        revokedAt: null,
-      },
-    });
-
-    await tx.bidResponseRevision.create({
-      data: {
-        bidResponseId: saved.id,
-        price: parsedPrice,
-        comment: trimmedComment,
-        revisionNumber: nextRevisionNumber,
-      },
-    });
-
-    const message = existing
-      ? `${req.profile!.companyName} revised their bid on "${bid.title}"`
-      : `New bid from ${req.profile!.companyName} on "${bid.title}"`;
-    const notified = await notifyRecipients(tx, "BID_RESPONSE_SUBMITTED", bidId, [
-      { recipientProfileId: bid.createdByProfileId, message },
-    ]);
-
-    return { response: saved, notified };
-  });
 
   sendPushForNotifications(notified, { bidId, groupId: bid.groupId }).catch(() => {});
 
-  res.status(existing ? 200 : 201).json({ response });
+  const isNewResponse = response.revisionNumber === 1;
+  res.status(isNewResponse ? 201 : 200).json({ response });
 }
 
 export async function revokeResponse(req: ProfileScopedRequest, res: Response) {

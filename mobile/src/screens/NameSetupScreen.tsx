@@ -1,17 +1,8 @@
 import React, { useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-} from "react-native";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity } from "react-native";
 import { setMyName } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
+import KeyboardAvoidingScreen from "../components/KeyboardAvoidingScreen";
 
 export default function NameSetupScreen() {
   const [name, setName] = useState("");
@@ -36,7 +27,7 @@ export default function NameSetupScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.outer} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+    <KeyboardAvoidingScreen style={styles.outer}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>Welcome to ValX</Text>
         <Text style={styles.subtitle}>You've been added as a team member. Just need your name to continue.</Text>
@@ -47,7 +38,7 @@ export default function NameSetupScreen() {
           {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Continue</Text>}
         </TouchableOpacity>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAvoidingScreen>
   );
 }
 

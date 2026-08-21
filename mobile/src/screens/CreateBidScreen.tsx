@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity } from "react-native";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import { createBid, Currency } from "../api/bids";
 import BidFormFields from "../components/BidFormFields";
+import KeyboardAvoidingScreen from "../components/KeyboardAvoidingScreen";
 
 export default function CreateBidScreen({ route, navigation }: any) {
   const { groupId } = route.params;
@@ -45,7 +46,7 @@ export default function CreateBidScreen({ route, navigation }: any) {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.outer} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+    <KeyboardAvoidingScreen style={styles.outer}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>New Bid</Text>
 
@@ -66,7 +67,7 @@ export default function CreateBidScreen({ route, navigation }: any) {
           {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Post Bid</Text>}
         </TouchableOpacity>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAvoidingScreen>
   );
 }
 

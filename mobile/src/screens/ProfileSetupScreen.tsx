@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
@@ -15,6 +14,7 @@ import { createProfile, DeactivatedProfile, getMyProfiles, ProfileType, reactiva
 import { useAuth } from "../context/AuthContext";
 import CompanyProfileFields from "../components/CompanyProfileFields";
 import Avatar from "../components/Avatar";
+import KeyboardAvoidingScreen from "../components/KeyboardAvoidingScreen";
 
 export default function ProfileSetupScreen({ navigation }: any) {
   const [name, setName] = useState("");
@@ -75,11 +75,7 @@ export default function ProfileSetupScreen({ navigation }: any) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 40 : 0}
-    >
+    <KeyboardAvoidingScreen style={styles.container} keyboardVerticalOffset={Platform.OS === "ios" ? 40 : 0}>
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {deactivatedProfiles.length > 0 && (
           <View style={styles.reactivateSection}>
@@ -126,7 +122,7 @@ export default function ProfileSetupScreen({ navigation }: any) {
           <Text style={styles.logoutLinkText}>Log out</Text>
         </TouchableOpacity>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAvoidingScreen>
   );
 }
 

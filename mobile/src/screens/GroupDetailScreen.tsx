@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { getGroupDetail } from "../api/groups";
 import { Bid, getGroupBids, pinBid, unpinBid } from "../api/bids";
 import SwipeableRow from "../components/SwipeableRow";
+import { makeTogglePin } from "../hooks/useTogglePin";
 
 export default function GroupDetailScreen({ route, navigation }: any) {
   const { groupId } = route.params;
@@ -34,20 +35,12 @@ export default function GroupDetailScreen({ route, navigation }: any) {
 
   useFocusEffect(load);
 
-  const handleTogglePin = async (item: Bid) => {
-    setBids((prev) => prev.map((b) => (b.id === item.id ? { ...b, isPinned: !b.isPinned } : b)));
-    try {
-      if (item.isPinned) {
-        await unpinBid(auth, item.id);
-      } else {
-        await pinBid(auth, item.id);
-      }
-      load();
-    } catch (err: any) {
-      Alert.alert("Couldn't update pin", err.message ?? "Please try again");
-      load();
-    }
-  };
+  const handleTogglePin = makeTogglePin<Bid>(
+    setBids,
+    (id) => pinBid(auth, id),
+    (id) => unpinBid(auth, id),
+    load
+  );
 
   const filteredBids = useMemo(() => {
     const q = search.trim().toLowerCase();

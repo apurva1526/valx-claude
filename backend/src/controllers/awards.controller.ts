@@ -29,28 +29,6 @@ export async function closeBid(req: ProfileScopedRequest, res: Response) {
       .map((a) => [a.supplierProfileId, a.comment!.trim()])
   );
 
-  const responses = await prisma.bidResponse.findMany({
-    where: { bidId },
-    include: { supplierProfile: { select: { companyName: true } } },
-  });
-  const responseBySupplierId = new Map(responses.map((r) => [r.supplierProfileId, r]));
-
-  for (const id of requestedAwardIds) {
-    const response = responseBySupplierId.get(id);
-    if (!response) {
-      return res.status(400).json({ error: `Supplier ${id} has not responded to this bid` });
-    }
-    if (response.revokedAt) {
-      return res.status(400).json({ error: `Supplier ${id} revoked their bid and can't be awarded` });
-    }
-  }
-
-  const awardedResponses = requestedAwardIds.map((id) => responseBySupplierId.get(id)!);
-  const averagePrice =
-    awardedResponses.length > 0
-      ? awardedResponses.reduce((sum, r) => sum + r.price, 0) / awardedResponses.length
-      : null;
-
   try {
     const { award, notified } = await prisma.$transaction(async (tx) => {
       const result = await tx.bid.updateMany({
@@ -60,6 +38,28 @@ export async function closeBid(req: ProfileScopedRequest, res: Response) {
       if (result.count === 0) {
         throw new Error("ALREADY_CLOSED");
       }
+
+      // Re-checked inside the transaction, not before it: a supplier could otherwise revoke
+      // their response in the gap between an earlier read and this write, letting a
+      // just-revoked response still get awarded.
+      const responses = await tx.bidResponse.findMany({ where: { bidId } });
+      const responseBySupplierId = new Map(responses.map((r) => [r.supplierProfileId, r]));
+
+      for (const id of requestedAwardIds) {
+        const response = responseBySupplierId.get(id);
+        if (!response) {
+          throw new Error(`NOT_RESPONDED:${id}`);
+        }
+        if (response.revokedAt) {
+          throw new Error(`REVOKED:${id}`);
+        }
+      }
+
+      const awardedResponses = requestedAwardIds.map((id) => responseBySupplierId.get(id)!);
+      const averagePrice =
+        awardedResponses.length > 0
+          ? awardedResponses.reduce((sum, r) => sum + r.price, 0) / awardedResponses.length
+          : null;
 
       const created = await tx.awardRecord.create({
         data: {
@@ -95,8 +95,18 @@ export async function closeBid(req: ProfileScopedRequest, res: Response) {
 
     res.status(200).json({ award });
   } catch (err) {
-    if (err instanceof Error && err.message === "ALREADY_CLOSED") {
-      return res.status(409).json({ error: "This bid is already closed" });
+    if (err instanceof Error) {
+      if (err.message === "ALREADY_CLOSED") {
+        return res.status(409).json({ error: "This bid is already closed" });
+      }
+      if (err.message.startsWith("NOT_RESPONDED:")) {
+        return res.status(400).json({ error: `Supplier ${err.message.split(":")[1]} has not responded to this bid` });
+      }
+      if (err.message.startsWith("REVOKED:")) {
+        return res
+          .status(400)
+          .json({ error: `Supplier ${err.message.split(":")[1]} revoked their bid and can't be awarded` });
+      }
     }
     throw err;
   }

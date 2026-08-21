@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity } from "react-native";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import { Currency, updateBid } from "../api/bids";
 import BidFormFields from "../components/BidFormFields";
+import KeyboardAvoidingScreen from "../components/KeyboardAvoidingScreen";
 
 export default function EditBidScreen({ route, navigation }: any) {
   const { bid } = route.params;
@@ -41,7 +42,7 @@ export default function EditBidScreen({ route, navigation }: any) {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.outer} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+    <KeyboardAvoidingScreen style={styles.outer}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>Edit Bid</Text>
         <Text style={styles.notice}>Every supplier on this bid will be notified of the change.</Text>
@@ -63,7 +64,7 @@ export default function EditBidScreen({ route, navigation }: any) {
           {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Changes</Text>}
         </TouchableOpacity>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAvoidingScreen>
   );
 }
 

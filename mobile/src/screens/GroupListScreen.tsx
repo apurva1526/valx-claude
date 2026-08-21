@@ -7,6 +7,7 @@ import { getMyGroups, GroupListItem, pinGroup, unpinGroup } from "../api/groups"
 import { Bid, getOngoingBids } from "../api/bids";
 import Avatar from "../components/Avatar";
 import SwipeableRow from "../components/SwipeableRow";
+import { makeTogglePin } from "../hooks/useTogglePin";
 
 type TabView = "ALL" | "ONGOING_BIDS";
 type Row = { kind: "valx" } | { kind: "group"; group: GroupListItem };
@@ -40,20 +41,12 @@ export default function GroupListScreen({ navigation }: any) {
     }, [loadGroups])
   );
 
-  const handleTogglePin = async (item: GroupListItem) => {
-    setGroups((prev) => prev.map((g) => (g.id === item.id ? { ...g, isPinned: !g.isPinned } : g)));
-    try {
-      if (item.isPinned) {
-        await unpinGroup(auth, item.id);
-      } else {
-        await pinGroup(auth, item.id);
-      }
-      loadGroups();
-    } catch (err: any) {
-      Alert.alert("Couldn't update pin", err.message ?? "Please try again");
-      loadGroups();
-    }
-  };
+  const handleTogglePin = makeTogglePin<GroupListItem>(
+    setGroups,
+    (id) => pinGroup(auth, id),
+    (id) => unpinGroup(auth, id),
+    loadGroups
+  );
 
   const handleOpenBid = (bid: Bid & { groupName: string }) => {
     const chatsRoutes = [

@@ -5,7 +5,7 @@ import { assertGroupInScope } from "../middleware/requirePermission";
 import { getGroupForProfile } from "../lib/groupAccess";
 import { normalizePhoneNumber } from "../lib/phone";
 import { getPinnedIds, sortPinnedFirst } from "../lib/pins";
-import { NotifiedRecipient } from "../lib/notifications";
+import { NotifiedRecipient, notifyRecipients } from "../lib/notifications";
 import { sendPushForNotifications } from "../lib/push";
 
 export async function createGroup(req: ProfileScopedRequest, res: Response) {
@@ -183,9 +183,10 @@ export async function addSuppliers(req: ProfileScopedRequest, res: Response) {
     return res.status(403).json({ error: "Only the owning Buyer can add suppliers to this group" });
   }
 
-  const results = [];
+  // Normalize + dedupe the incoming contact list up front so every later query is batched
+  // by phone number (one query for the whole request) instead of run once per contact.
   const skipped: { phoneNumber: string; reason: string }[] = [];
-  const notified: NotifiedRecipient[] = [];
+  const nameByPhone = new Map<string, string | null>();
   for (const contact of contacts) {
     const rawPhoneNumber = typeof contact?.phoneNumber === "string" ? contact.phoneNumber.trim() : "";
     const name = typeof contact?.name === "string" ? contact.name.trim() : null;
@@ -197,39 +198,56 @@ export async function addSuppliers(req: ProfileScopedRequest, res: Response) {
       skipped.push({ phoneNumber, reason: "That's your own number — you can't add yourself as a supplier" });
       continue;
     }
+    if (!nameByPhone.has(phoneNumber)) {
+      nameByPhone.set(phoneNumber, name);
+    }
+  }
 
-    const existingSupplierProfile = await prisma.profile.findFirst({
-      where: { phoneNumber, profileType: "SUPPLIER", deactivatedAt: null },
+  const phoneNumbers = [...nameByPhone.keys()];
+  if (phoneNumbers.length === 0) {
+    return res.status(201).json({ suppliers: [], skipped });
+  }
+
+  const [existingSupplierProfiles, existingGroupSuppliers] = await Promise.all([
+    prisma.profile.findMany({
+      where: { phoneNumber: { in: phoneNumbers }, profileType: "SUPPLIER", deactivatedAt: null },
       orderBy: { createdAt: "asc" },
-    });
+    }),
+    prisma.groupSupplier.findMany({ where: { groupId, phoneNumber: { in: phoneNumbers } } }),
+  ]);
 
-    const alreadyInGroup = await prisma.groupSupplier.findUnique({
-      where: { groupId_phoneNumber: { groupId, phoneNumber } },
-    });
+  // Earliest-created SUPPLIER profile per phone number — a number can have more than one
+  // over time, and the original per-contact lookup always picked the first ever created.
+  const supplierProfileByPhone = new Map<string, (typeof existingSupplierProfiles)[number]>();
+  for (const profile of existingSupplierProfiles) {
+    if (!supplierProfileByPhone.has(profile.phoneNumber)) {
+      supplierProfileByPhone.set(profile.phoneNumber, profile);
+    }
+  }
+  const existingPhonesInGroup = new Set(existingGroupSuppliers.map((gs) => gs.phoneNumber));
+  const phonesNeedingCreate = phoneNumbers.filter((p) => !existingPhonesInGroup.has(p));
 
-    const groupSupplier = await prisma.groupSupplier.upsert({
-      where: { groupId_phoneNumber: { groupId, phoneNumber } },
-      update: {},
-      create: {
+  if (phonesNeedingCreate.length > 0) {
+    await prisma.groupSupplier.createMany({
+      data: phonesNeedingCreate.map((phoneNumber) => ({
         groupId,
         phoneNumber,
-        contactName: name,
-        supplierProfileId: existingSupplierProfile?.id ?? null,
-      },
+        contactName: nameByPhone.get(phoneNumber) ?? null,
+        supplierProfileId: supplierProfileByPhone.get(phoneNumber)?.id ?? null,
+      })),
+      skipDuplicates: true,
     });
-    results.push(groupSupplier);
+  }
 
-    if (!alreadyInGroup && existingSupplierProfile) {
-      const message = `You were added to "${group.name}"`;
-      await prisma.notification.create({
-        data: {
-          recipientProfileId: existingSupplierProfile.id,
-          type: "ADDED_TO_GROUP",
-          message,
-        },
-      });
-      notified.push({ recipientProfileId: existingSupplierProfile.id, message });
-    }
+  const results = await prisma.groupSupplier.findMany({ where: { groupId, phoneNumber: { in: phoneNumbers } } });
+
+  const notified: NotifiedRecipient[] = phonesNeedingCreate
+    .map((phoneNumber) => supplierProfileByPhone.get(phoneNumber))
+    .filter((profile): profile is NonNullable<typeof profile> => !!profile)
+    .map((profile) => ({ recipientProfileId: profile.id, message: `You were added to "${group.name}"` }));
+
+  if (notified.length > 0) {
+    await prisma.$transaction((tx) => notifyRecipients(tx, "ADDED_TO_GROUP", null, notified));
   }
 
   sendPushForNotifications(notified, { groupId }).catch(() => {});

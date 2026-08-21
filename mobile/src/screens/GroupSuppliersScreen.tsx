@@ -48,10 +48,10 @@ export default function GroupSuppliersScreen({ route, navigation }: any) {
     ]);
   };
 
-  const statusFor = (item: GroupSupplier) => {
-    if (item.supplierProfile?.deactivatedAt) return "Inactive";
+  const statusFor = (item: GroupSupplier, verbose = false) => {
+    if (item.supplierProfile?.deactivatedAt) return verbose ? "Inactive (profile deactivated)" : "Inactive";
     if (item.supplierProfileId) return "On ValX";
-    return "Pending";
+    return verbose ? "Hasn't joined ValX yet" : "Pending";
   };
 
   if (isLoading || !group) {
@@ -103,11 +103,7 @@ export default function GroupSuppliersScreen({ route, navigation }: any) {
             <Text style={styles.sheetTitle}>{selected?.contactName ?? selected?.phoneNumber}</Text>
             <Text style={styles.sheetSubtitle}>{selected?.phoneNumber}</Text>
             <Text style={[styles.sheetStatus, selected?.supplierProfile?.deactivatedAt && styles.sheetStatusInactive]}>
-              {selected?.supplierProfile?.deactivatedAt
-                ? "Inactive (profile deactivated)"
-                : selected?.supplierProfileId
-                  ? "On ValX"
-                  : "Hasn't joined ValX yet"}
+              {selected ? statusFor(selected, true) : ""}
             </Text>
 
             {canManage && (

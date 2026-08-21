@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  KeyboardAvoidingView,
   Platform,
   StyleSheet,
   Text,
@@ -14,6 +13,7 @@ import {
 import { useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../context/AuthContext";
 import { ChatMessage, getChatHistory, openChatSocket, sendChatMessage } from "../api/chat";
+import KeyboardAvoidingScreen from "../components/KeyboardAvoidingScreen";
 
 export default function BidChatScreen({ route, navigation }: any) {
   const { bidId } = route.params;
@@ -61,11 +61,7 @@ export default function BidChatScreen({ route, navigation }: any) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-    >
+    <KeyboardAvoidingScreen style={styles.container} keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.back}>{"‹ Back"}</Text>
@@ -115,7 +111,7 @@ export default function BidChatScreen({ route, navigation }: any) {
           {isSending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.sendButtonText}>Send</Text>}
         </TouchableOpacity>
       </View>
-    </KeyboardAvoidingView>
+    </KeyboardAvoidingScreen>
   );
 }
 

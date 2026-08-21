@@ -36,7 +36,7 @@ export async function notifyGroupSuppliers(
 export async function notifyRecipients(
   tx: PrismaTx,
   type: NotificationType,
-  bidId: string,
+  bidId: string | null,
   recipients: NotifiedRecipient[]
 ): Promise<NotifiedRecipient[]> {
   if (recipients.length === 0) return [];
@@ -75,21 +75,27 @@ export async function notifyOrTouchBidGroup(
   const recipientIds = [group.buyerProfileId, ...group.suppliers.map((s) => s.supplierProfileId as string)].filter(
     (id) => id !== senderProfileId
   );
+  if (recipientIds.length === 0) return [];
 
-  for (const recipientProfileId of recipientIds) {
-    const existingUnread = await tx.notification.findFirst({
-      where: { recipientProfileId, bidId, type, readAt: null },
+  // One read to find who already has an unread row to touch, then at most one batched
+  // update and one batched create — instead of a findFirst + update-or-create per recipient.
+  const existingUnread = await tx.notification.findMany({
+    where: { recipientProfileId: { in: recipientIds }, bidId, type, readAt: null },
+    select: { id: true, recipientProfileId: true },
+  });
+  const recipientIdsWithUnread = new Set(existingUnread.map((n) => n.recipientProfileId));
+  const recipientIdsNeedingCreate = recipientIds.filter((id) => !recipientIdsWithUnread.has(id));
+
+  if (existingUnread.length > 0) {
+    await tx.notification.updateMany({
+      where: { id: { in: existingUnread.map((n) => n.id) } },
+      data: { message, createdAt: new Date() },
     });
-    if (existingUnread) {
-      await tx.notification.update({
-        where: { id: existingUnread.id },
-        data: { message, createdAt: new Date() },
-      });
-    } else {
-      await tx.notification.create({
-        data: { recipientProfileId, type, message, bidId },
-      });
-    }
+  }
+  if (recipientIdsNeedingCreate.length > 0) {
+    await tx.notification.createMany({
+      data: recipientIdsNeedingCreate.map((recipientProfileId) => ({ recipientProfileId, type, message, bidId })),
+    });
   }
 
   return recipientIds.map((recipientProfileId) => ({ recipientProfileId, message }));

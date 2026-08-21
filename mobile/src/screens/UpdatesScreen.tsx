@@ -2,7 +2,7 @@ import React, { useCallback, useState } from "react";
 import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { CommonActions, useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../context/AuthContext";
-import { getNotifications, markAllNotificationsRead, Notification } from "../api/notifications";
+import { getNotifications, markNotificationRead, Notification } from "../api/notifications";
 
 export default function UpdatesScreen({ navigation }: any) {
   const { token, activeProfile } = useAuth();
@@ -14,12 +14,7 @@ export default function UpdatesScreen({ navigation }: any) {
   const load = useCallback(() => {
     setIsLoading(true);
     getNotifications(auth)
-      .then(({ notifications }) => {
-        setNotifications(notifications);
-        if (notifications.some((n) => !n.readAt)) {
-          markAllNotificationsRead(auth).catch(() => {});
-        }
-      })
+      .then(({ notifications }) => setNotifications(notifications))
       .catch((err) => Alert.alert("Couldn't load updates", err.message ?? "Please try again"))
       .finally(() => setIsLoading(false));
   }, [token, activeProfile]);
@@ -27,6 +22,10 @@ export default function UpdatesScreen({ navigation }: any) {
   useFocusEffect(load);
 
   const handlePress = (item: Notification) => {
+    if (!item.readAt) {
+      markNotificationRead(auth, item.id).catch(() => {});
+      setNotifications((prev) => prev.map((n) => (n.id === item.id ? { ...n, readAt: new Date().toISOString() } : n)));
+    }
     if (item.bidId && item.bid?.groupId) {
       const groupId = item.bid.groupId;
       const chatsRoutes: { name: string; params?: object }[] = [

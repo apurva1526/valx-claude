@@ -1,18 +1,9 @@
 import React, { useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { createProfile, ProfileType } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
 import CompanyProfileFields from "../components/CompanyProfileFields";
+import KeyboardAvoidingScreen from "../components/KeyboardAvoidingScreen";
 
 export default function AddProfileScreen({ navigation }: any) {
   const [companyName, setCompanyName] = useState("");
@@ -43,7 +34,7 @@ export default function AddProfileScreen({ navigation }: any) {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+    <KeyboardAvoidingScreen style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.back}>{"‹ Cancel"}</Text>
@@ -67,7 +58,7 @@ export default function AddProfileScreen({ navigation }: any) {
           {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Create Profile</Text>}
         </TouchableOpacity>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAvoidingScreen>
   );
 }
 

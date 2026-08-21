@@ -1,17 +1,8 @@
 import React, { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-} from "react-native";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity } from "react-native";
 import { getMyProfiles, requestOtp, verifyOtp } from "../api/auth";
 import { useAuth } from "../context/AuthContext";
+import KeyboardAvoidingScreen from "../components/KeyboardAvoidingScreen";
 
 const RESEND_COOLDOWN_SECONDS = 30;
 
@@ -66,7 +57,7 @@ export default function OtpVerifyScreen({ route, navigation }: any) {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+    <KeyboardAvoidingScreen style={styles.container}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>Verify OTP</Text>
         <Text style={styles.subtitle}>Sent to {phoneNumber}</Text>
@@ -92,7 +83,7 @@ export default function OtpVerifyScreen({ route, navigation }: any) {
           )}
         </TouchableOpacity>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAvoidingScreen>
   );
 }
 

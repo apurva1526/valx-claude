@@ -1,17 +1,8 @@
 import React, { useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-} from "react-native";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import { createGroup } from "../api/groups";
+import KeyboardAvoidingScreen from "../components/KeyboardAvoidingScreen";
 
 export default function CreateGroupScreen({ navigation }: any) {
   const { token, activeProfile } = useAuth();
@@ -39,7 +30,7 @@ export default function CreateGroupScreen({ navigation }: any) {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.outer} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+    <KeyboardAvoidingScreen style={styles.outer}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>New Group</Text>
         <TextInput style={styles.input} placeholder="Group name" value={name} onChangeText={setName} autoFocus />
@@ -54,7 +45,7 @@ export default function CreateGroupScreen({ navigation }: any) {
           {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Create</Text>}
         </TouchableOpacity>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAvoidingScreen>
   );
 }
 

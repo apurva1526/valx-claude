@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  KeyboardAvoidingView,
   Modal,
   Platform,
   StyleSheet,
@@ -15,6 +14,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { closeBid } from "../api/awards";
 import { BuyerResponseRow } from "../api/bidResponses";
+import KeyboardAvoidingScreen from "./KeyboardAvoidingScreen";
 
 export default function CloseBidModal({
   visible,
@@ -64,11 +64,7 @@ export default function CloseBidModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        style={styles.backdrop}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 40 : 0}
-      >
+      <KeyboardAvoidingScreen style={styles.backdrop} keyboardVerticalOffset={Platform.OS === "ios" ? 40 : 0}>
         <View style={styles.sheet}>
           <Text style={styles.title}>Close Bid</Text>
           <Text style={styles.subtitle}>Select suppliers to award, or close with no award.</Text>
@@ -121,7 +117,7 @@ export default function CloseBidModal({
             </TouchableOpacity>
           </View>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingScreen>
     </Modal>
   );
 }

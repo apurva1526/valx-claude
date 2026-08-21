@@ -46,6 +46,7 @@
     "plugins": [
       "expo-secure-store",
       "expo-dev-client",
+      "expo-system-ui",
       [
         "expo-contacts",
         {

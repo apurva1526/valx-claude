@@ -6,7 +6,6 @@ import { resolveProfileAccess } from "../lib/profileAccess";
 import { ProfileScopedRequest } from "../middleware/activeProfile";
 import { NotifiedRecipient, notifyRecipients } from "../lib/notifications";
 import { sendPushForNotifications } from "../lib/push";
-import { revokeResponseCore } from "./bidResponses.controller";
 
 export async function getMyProfiles(req: AuthedRequest, res: Response) {
   const userId = req.user!.userId;
@@ -164,18 +163,30 @@ export async function deactivateProfile(req: ProfileScopedRequest, res: Response
           data: { status: "CLOSED" },
         });
 
+        // One query for every affected group's members instead of one per bid, then group
+        // the results in memory — each bid still needs its own notifyRecipients call since
+        // a Notification row carries a single bidId, but the expensive read is now batched.
+        const distinctGroupIds = [...new Set(ongoingBids.map((b) => b.groupId))];
+        const allGroupMembers = await tx.groupSupplier.findMany({
+          where: { groupId: { in: distinctGroupIds }, supplierProfileId: { not: null } },
+          select: { groupId: true, supplierProfileId: true },
+        });
+        const supplierIdsByGroupId = new Map<string, string[]>();
+        for (const m of allGroupMembers) {
+          const list = supplierIdsByGroupId.get(m.groupId) ?? [];
+          list.push(m.supplierProfileId as string);
+          supplierIdsByGroupId.set(m.groupId, list);
+        }
+
         for (const bid of ongoingBids) {
-          const groupMembers = await tx.groupSupplier.findMany({
-            where: { groupId: bid.groupId, supplierProfileId: { not: null } },
-            select: { supplierProfileId: true },
-          });
+          const supplierIds = supplierIdsByGroupId.get(bid.groupId) ?? [];
           notified.push(
             ...(await notifyRecipients(
               tx,
               "BID_CLOSED",
               bid.id,
-              groupMembers.map((m) => ({
-                recipientProfileId: m.supplierProfileId as string,
+              supplierIds.map((supplierProfileId) => ({
+                recipientProfileId: supplierProfileId,
                 message: `"${bid.title}" was closed because the buyer is no longer active`,
               }))
             ))
@@ -195,34 +206,55 @@ export async function deactivateProfile(req: ProfileScopedRequest, res: Response
       });
       responsesWithdrawn = ongoingResponses.length;
 
-      for (const response of ongoingResponses) {
-        const { notified: revokeNotified } = await revokeResponseCore(
-          tx,
-          response,
-          response.bid.id,
-          response.bid.createdByProfileId,
-          `A supplier's bid on "${response.bid.title}" was withdrawn (profile deactivated)`
-        );
-        notified.push(...revokeNotified);
+      if (ongoingResponses.length > 0) {
+        // Prisma's interactive transactions share one connection, so these can't safely run
+        // via Promise.all — instead the two writes revokeResponseCore does per-response are
+        // batched into one updateMany + one createMany across all of them. The history log
+        // (BidResponseRevision) still always increments; the cap-counting revisionNumber on
+        // BidResponse itself is left unchanged, matching revokeResponseCore's involuntary-revoke
+        // behavior (deactivation shouldn't burn one of the supplier's 5 revisions).
+        const now = new Date();
+        await tx.bidResponse.updateMany({
+          where: { id: { in: ongoingResponses.map((r) => r.id) } },
+          data: { revokedAt: now },
+        });
+        await tx.bidResponseRevision.createMany({
+          data: ongoingResponses.map((r) => ({
+            bidResponseId: r.id,
+            price: r.price,
+            comment: r.comment,
+            revisionNumber: r.revisionNumber + 1,
+            revokedAt: now,
+          })),
+        });
+
+        for (const response of ongoingResponses) {
+          notified.push(
+            ...(await notifyRecipients(tx, "BID_RESPONSE_SUBMITTED", response.bid.id, [
+              {
+                recipientProfileId: response.bid.createdByProfileId,
+                message: `A supplier's bid on "${response.bid.title}" was withdrawn (profile deactivated)`,
+              },
+            ]))
+          );
+        }
       }
 
       const memberships = await tx.groupSupplier.findMany({
         where: { supplierProfileId: targetProfileId },
         include: { group: { select: { name: true, buyerProfileId: true } } },
       });
-      for (const membership of memberships) {
-        await tx.notification.create({
-          data: {
+      notified.push(
+        ...(await notifyRecipients(
+          tx,
+          "PROFILE_DEACTIVATED",
+          null,
+          memberships.map((membership) => ({
             recipientProfileId: membership.group.buyerProfileId,
-            type: "PROFILE_DEACTIVATED",
             message: `A supplier in "${membership.group.name}" is no longer active`,
-          },
-        });
-        notified.push({
-          recipientProfileId: membership.group.buyerProfileId,
-          message: `A supplier in "${membership.group.name}" is no longer active`,
-        });
-      }
+          }))
+        ))
+      );
       // GroupSupplier rows are intentionally left untouched so reactivation restores them.
     }
 

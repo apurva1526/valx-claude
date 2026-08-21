@@ -2,8 +2,6 @@ import React, { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,6 +11,7 @@ import {
 } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import { setMyName, updateProfile } from "../api/auth";
+import KeyboardAvoidingScreen from "../components/KeyboardAvoidingScreen";
 
 export default function EditProfileScreen({ navigation }: any) {
   const { token, activeProfile, setActiveProfile, userName, setUserName } = useAuth();
@@ -51,7 +50,7 @@ export default function EditProfileScreen({ navigation }: any) {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+    <KeyboardAvoidingScreen style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.back}>{"‹ Cancel"}</Text>
@@ -67,7 +66,7 @@ export default function EditProfileScreen({ navigation }: any) {
         <TextInput style={styles.input} placeholder="Company name" value={companyName} onChangeText={setCompanyName} />
         <TextInput style={styles.input} placeholder="GST number (optional)" value={gstNumber} onChangeText={setGstNumber} />
       </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAvoidingScreen>
   );
 }
 

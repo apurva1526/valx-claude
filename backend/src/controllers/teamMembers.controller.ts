@@ -31,6 +31,9 @@ export async function addTeamMember(req: ProfileScopedRequest, res: Response) {
   if (!phoneNumber) {
     return res.status(400).json({ error: "phoneNumber is invalid" });
   }
+  if (phoneNumber === req.profile!.phoneNumber || phoneNumber === req.user!.phoneNumber) {
+    return res.status(400).json({ error: "That's your own number — you can't add yourself as a team member" });
+  }
 
   const level: AccessLevel = VALID_LEVELS.includes(accessLevel) ? accessLevel : "MANAGE";
 

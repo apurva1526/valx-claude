@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
   Modal,
   Platform,
   StyleSheet,
@@ -13,6 +12,7 @@ import {
 } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import { submitResponse, YourResponse } from "../api/bidResponses";
+import KeyboardAvoidingScreen from "./KeyboardAvoidingScreen";
 
 const MAX_REVISIONS = 5;
 
@@ -67,11 +67,7 @@ export default function MakeBidModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        style={styles.backdrop}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 40 : 0}
-      >
+      <KeyboardAvoidingScreen style={styles.backdrop} keyboardVerticalOffset={Platform.OS === "ios" ? 40 : 0}>
         <View style={styles.sheet}>
           <Text style={styles.title}>{yourResponse ? "Revise Bid" : "Make Bid"}</Text>
           <Text style={styles.revisionCount}>
@@ -117,7 +113,7 @@ export default function MakeBidModal({
             </TouchableOpacity>
           </View>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingScreen>
     </Modal>
   );
 }

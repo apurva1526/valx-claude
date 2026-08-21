@@ -1,16 +1,7 @@
 import React, { useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-} from "react-native";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity } from "react-native";
 import { requestOtp } from "../api/auth";
+import KeyboardAvoidingScreen from "../components/KeyboardAvoidingScreen";
 
 export default function PhoneEntryScreen({ navigation }: any) {
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -33,7 +24,7 @@ export default function PhoneEntryScreen({ navigation }: any) {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+    <KeyboardAvoidingScreen style={styles.container}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>ValX</Text>
         <Text style={styles.subtitle}>Enter your phone number</Text>
@@ -49,7 +40,7 @@ export default function PhoneEntryScreen({ navigation }: any) {
           {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Get OTP</Text>}
         </TouchableOpacity>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAvoidingScreen>
   );
 }
 

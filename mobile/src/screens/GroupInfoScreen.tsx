@@ -17,18 +17,24 @@ export default function GroupInfoScreen({ route, navigation }: any) {
 
   const isBuyer = activeProfile?.profileType === "BUYER";
   const isOwner = activeProfile?.access === "OWNER";
+  // Listing team members is MANAGE-gated server-side; a VIEW/EDIT member's request would
+  // 403, so only attempt it (and only show the row) when they'd actually be allowed to see it.
+  const canViewTeam = isOwner || activeProfile?.access === "MANAGE";
   const auth = { token: token!, profileId: activeProfile!.id };
 
   const load = useCallback(() => {
     setIsLoading(true);
-    Promise.all([getGroupDetail(auth, groupId), listTeamMembers(auth, activeProfile!.id)])
+    Promise.all([
+      getGroupDetail(auth, groupId),
+      canViewTeam ? listTeamMembers(auth, activeProfile!.id) : Promise.resolve({ teamMembers: [] }),
+    ])
       .then(([{ group }, { teamMembers }]) => {
         setGroup(group);
         setTeamMembers(teamMembers.filter((tm) => !tm.scopeGroupId || tm.scopeGroupId === groupId));
       })
       .catch((err) => Alert.alert("Couldn't load group details", err.message ?? "Please try again"))
       .finally(() => setIsLoading(false));
-  }, [token, activeProfile, groupId]);
+  }, [token, activeProfile, groupId, canViewTeam]);
 
   useFocusEffect(
     useCallback(() => {
@@ -36,14 +42,22 @@ export default function GroupInfoScreen({ route, navigation }: any) {
     }, [load])
   );
 
+  // exitTeamMembership removes the whole TeamMember row for this profile, not just this
+  // group. If access isn't scoped to a single group (scopeGroupId === null), that means
+  // company-wide access — exiting here removes access to every group under this profile,
+  // not only the one currently being viewed. Warn accurately instead of implying it's scoped.
+  const isCompanyWideAccess = activeProfile?.scopeGroupId == null;
+
   const handleExit = () => {
     Alert.alert(
-      "Exit this group?",
-      "You'll lose your access as a team member. Someone with Manage access would need to add you back.",
+      isCompanyWideAccess ? "Exit this team?" : "Exit this group?",
+      isCompanyWideAccess
+        ? "Your access isn't limited to this group — exiting removes your access to every group under this company, not just this one. Someone with Manage access would need to add you back."
+        : "You'll lose your access as a team member. Someone with Manage access would need to add you back.",
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Exit Group",
+          text: isCompanyWideAccess ? "Exit Team" : "Exit Group",
           style: "destructive",
           onPress: async () => {
             setIsExiting(true);
@@ -93,10 +107,12 @@ export default function GroupInfoScreen({ route, navigation }: any) {
         </View>
 
         <View style={styles.section}>
-          <TouchableOpacity style={styles.row} onPress={() => navigation.navigate("TeamMembers", { groupId })}>
-            <Text style={styles.rowTitle}>Team Members</Text>
-            <Text style={styles.rowMeta}>{teamMembers.length}  ›</Text>
-          </TouchableOpacity>
+          {canViewTeam && (
+            <TouchableOpacity style={styles.row} onPress={() => navigation.navigate("TeamMembers", { groupId })}>
+              <Text style={styles.rowTitle}>Team Members</Text>
+              <Text style={styles.rowMeta}>{teamMembers.length}  ›</Text>
+            </TouchableOpacity>
+          )}
 
           {isBuyer ? (
             <TouchableOpacity
@@ -119,7 +135,11 @@ export default function GroupInfoScreen({ route, navigation }: any) {
 
         {!isOwner && (
           <TouchableOpacity style={styles.exitButton} onPress={handleExit} disabled={isExiting}>
-            {isExiting ? <ActivityIndicator color="#B00020" /> : <Text style={styles.exitButtonText}>Exit Group</Text>}
+            {isExiting ? (
+              <ActivityIndicator color="#B00020" />
+            ) : (
+              <Text style={styles.exitButtonText}>{isCompanyWideAccess ? "Exit Team" : "Exit Group"}</Text>
+            )}
           </TouchableOpacity>
         )}
       </ScrollView>

@@ -15,4 +15,8 @@ export const env = {
   firebaseServiceAccountPath: process.env.FIREBASE_SERVICE_ACCOUNT_PATH,
   firebaseServiceAccountJson: process.env.FIREBASE_SERVICE_ACCOUNT_JSON,
   twoFactorApiKey: process.env.TWO_FACTOR_API_KEY,
+  // A reserved 10-digit number + fixed code that App Store/Play Store reviewers can use to sign in
+  // without receiving a real SMS. Leave DEMO_PHONE_NUMBER unset to disable this entirely.
+  demoPhoneNumber: process.env.DEMO_PHONE_NUMBER,
+  demoOtpCode: process.env.DEMO_OTP_CODE ?? "123456",
 };

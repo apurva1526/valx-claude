@@ -18,7 +18,14 @@ function requireApiKey(): string {
   return env.twoFactorApiKey;
 }
 
+function isDemoPhoneNumber(phoneNumber: string): boolean {
+  return !!env.demoPhoneNumber && phoneNumber === env.demoPhoneNumber;
+}
+
 export async function sendOtp(phoneNumber: string): Promise<void> {
+  // Reserved for app-store/play-store review — no real SMS is sent, verifyOtp checks a fixed code instead.
+  if (isDemoPhoneNumber(phoneNumber)) return;
+
   const res = await fetch(`${BASE_URL}/${requireApiKey()}/SMS/${phoneNumber}/AUTOGEN/${OTP_TEMPLATE_NAME}`);
   const data = (await res.json()) as TwoFactorResponse;
   if (data.Status !== "Success") {
@@ -33,6 +40,10 @@ export async function sendOtp(phoneNumber: string): Promise<void> {
 }
 
 export async function verifyOtp(phoneNumber: string, otp: string): Promise<boolean> {
+  if (isDemoPhoneNumber(phoneNumber)) {
+    return otp === env.demoOtpCode;
+  }
+
   const challenge = await prisma.otpChallenge.findUnique({ where: { phoneNumber } });
   if (!challenge) return false;
 
